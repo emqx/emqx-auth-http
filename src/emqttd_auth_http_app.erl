@@ -1,0 +1,42 @@
+%%--------------------------------------------------------------------
+%% Copyright (c) 2016 Feng Lee <feng@emqtt.io>.
+%%
+%% Licensed under the Apache License, Version 2.0 (the "License");
+%% you may not use this file except in compliance with the License.
+%% You may obtain a copy of the License at
+%%
+%%     http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing, software
+%% distributed under the License is distributed on an "AS IS" BASIS,
+%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%% See the License for the specific language governing permissions and
+%% limitations under the License.
+%%--------------------------------------------------------------------
+
+-module(emqttd_auth_http_app).
+
+-behaviour(application).
+
+%% Application callbacks
+-export([start/2, prep_stop/1, stop/1]).
+
+-behaviour(supervisor).
+
+%% Supervisor callbacks
+-export([init/1]).
+
+start(_StartType, _StartArgs) ->
+    %%TODO: register
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+
+prep_stop(State) ->
+    %%TODO: unregister
+    State.
+
+stop(_State) ->
+    ok.
+
+init([]) ->
+    {ok, { {one_for_all, 10, 100}, []} }.
+
