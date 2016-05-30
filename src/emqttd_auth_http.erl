@@ -16,3 +16,25 @@
 
 -module(emqttd_auth_http).
 
+-behaviour(emqttd_auth_mod).
+
+-include("../../../include/emqttd.hrl").
+
+-export([init/1, check/3, description/0]).
+
+-define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
+
+init(AuthApi) -> 
+    {ok, AuthApi}.
+
+check(#mqtt_client{username = Username}, _Password, _AuthApi) when ?UNDEFINED(Username) ->
+    {error, username_undefined};
+
+check(_Client, Password, _AuthApi) when ?UNDEFINED(Password) ->
+    {error, password_undefined};
+
+check(Client, Password, AuthApi) ->
+    ok.
+
+description() -> "Authentication with HTTP API".
+

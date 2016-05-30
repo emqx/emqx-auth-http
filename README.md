@@ -1,2 +1,6 @@
-# emqttd_auth_http
-Authenticate against HTTP API
+
+emqttd_auth_http
+================
+
+Authenticate by HTTP API
+

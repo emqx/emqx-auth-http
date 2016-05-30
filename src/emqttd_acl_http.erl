@@ -16,3 +16,23 @@
 
 -module(emqttd_acl_http).
 
+-behaviour(emqttd_acl_mod).
+
+-include("../../../include/emqttd.hrl").
+
+%% ACL callbacks
+-export([init/1, check_acl/2, reload_acl/1, description/0]).
+
+init(AclApi) ->
+    {ok, AclApi}.
+
+check_acl({#mqtt_client{username = <<$$, _/binary>>}, _PubSub, _Topic}, _State) ->
+    {error, bad_username};
+
+check_acl({Client, PubSub, Topic}, AclApi) ->
+    allow.
+
+reload_acl(_State) -> ok.
+
+description() -> "ACL with HTTP API".
+
