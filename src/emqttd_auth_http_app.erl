@@ -18,6 +18,8 @@
 
 -behaviour(application).
 
+-include("emqttd_auth_http.hrl").
+
 %% Application callbacks
 -export([start/2, prep_stop/1, stop/1]).
 
@@ -26,17 +28,58 @@
 %% Supervisor callbacks
 -export([init/1]).
 
+-define(APP, emqttd_auth_http).
+
+%%--------------------------------------------------------------------
+%% Application Callbacks
+%%--------------------------------------------------------------------
+
 start(_StartType, _StartArgs) ->
-    %%TODO: register
+    SuperReq = application:get_env(?APP, super_req, undefined),
+    ok = register_auth_mod(record(SuperReq)),
+    ok = register_acl_mod(record(SuperReq)),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
+register_auth_mod(SuperReq) ->
+    {ok, AuthReq} = application:get_env(?APP, auth_req),
+    emqttd_access_control:register_mod(auth, emqttd_auth_http, {SuperReq, record(AuthReq)}).
+
+register_acl_mod(SuperReq) ->
+    with_acl_enabled(fun(SuperReq) ->
+        {ok, AclReq} = application:get_env(?APP, acl_req),
+        emqttd_access_control:register_mod(acl, emqttd_acl_http, {SuperReq, record(AclReq)})
+    end).
+
 prep_stop(State) ->
-    %%TODO: unregister
+    emqttd_access_control:unregister_mod(acl, emqttd_acl_http),
+    emqttd_access_control:unregister_mod(auth, emqttd_auth_http),
     State.
 
 stop(_State) ->
     ok.
 
+%%--------------------------------------------------------------------
+%% Dummy Supervisor
+%%--------------------------------------------------------------------
+
 init([]) ->
     {ok, { {one_for_all, 10, 100}, []} }.
+
+%%--------------------------------------------------------------------
+%% Internel Functions
+%%--------------------------------------------------------------------
+
+record(undefined) ->
+    undefined;
+record(Config) ->
+    Method = proplists:get_value(method, Config, post),
+    Url    = proplists:get_value(url, Config),
+    Params = proplists:get_value(params, Config),
+    #http_request{method = Method, url = Url, params = Params}.
+
+with_acl_enabled(Fun) ->
+    case application:get_env(?APP, acl_req) of
+        {ok, AclReq} -> Fun(AclReq);
+        undefined    -> ok
+    end.
 

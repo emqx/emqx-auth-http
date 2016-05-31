@@ -20,19 +20,29 @@
 
 -include("../../../include/emqttd.hrl").
 
+-import(emqttd_auth_http, [is_superuser/2, feedvar/2, feedvar/3]).
+
 %% ACL callbacks
 -export([init/1, check_acl/2, reload_acl/1, description/0]).
 
-init(AclApi) ->
-    {ok, AclApi}.
+init({SuperReq, AclReq}) ->
+    {ok, {SuperReq, AclReq}}.
 
 check_acl({#mqtt_client{username = <<$$, _/binary>>}, _PubSub, _Topic}, _State) ->
     {error, bad_username};
 
-check_acl({Client, PubSub, Topic}, AclApi) ->
-    allow.
+check_acl({Client, PubSub, Topic}, {SuperReq, #http_req{method = Method, url = Url, params = Params}}) ->
+    case is_superuser(SuperReq, Client) of
+        false -> Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
+                 case http_request(Method, Url, Params1) of
+                    {ok, 200, _Body}   -> allow;
+                    {ok, _Code, _Body} -> deny;
+                    {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), deny
+                 end;
+        true  -> allow
+    end.
 
 reload_acl(_State) -> ok.
 
-description() -> "ACL with HTTP API".
+description() -> "ACL by HTTP API".
 
