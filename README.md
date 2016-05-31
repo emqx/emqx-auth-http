@@ -72,8 +72,8 @@ File: etc/plugin.config
 ].
 ```
 
-Load Plugin
------------
+Load the Plugin
+---------------
 
 ```
 ./bin/emqttd_ctl plugins load emqttd_auth_http
