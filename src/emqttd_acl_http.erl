@@ -28,6 +28,8 @@
 -export([init/1, check_acl/2, reload_acl/1, description/0]).
 
 init({SuperReq, AclReq}) ->
+    io:format("SuperReq: ~p~n", [SuperReq]),
+    io:format("AclReq: ~p~n", [AclReq]),
     {ok, {SuperReq, AclReq}}.
 
 check_acl({#mqtt_client{username = <<$$, _/binary>>}, _PubSub, _Topic}, _State) ->
