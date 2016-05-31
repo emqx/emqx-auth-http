@@ -22,6 +22,8 @@
 
 -include("../../../include/emqttd.hrl").
 
+-export([is_superuser/2, http_request/3, feedvar/2, feedvar/3]).
+
 -export([init/1, check/3, description/0]).
 
 -define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).

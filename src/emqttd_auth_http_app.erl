@@ -35,9 +35,8 @@
 %%--------------------------------------------------------------------
 
 start(_StartType, _StartArgs) ->
-    SuperReq = application:get_env(?APP, super_req, undefined),
-    ok = register_auth_mod(record(SuperReq)),
-    ok = register_acl_mod(record(SuperReq)),
+    SuperReq = record(application:get_env(?APP, super_req, undefined)),
+    ok = register_auth_mod(SuperReq), ok = register_acl_mod(SuperReq),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 register_auth_mod(SuperReq) ->
