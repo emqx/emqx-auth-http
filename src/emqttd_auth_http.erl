@@ -18,13 +18,15 @@
 
 -behaviour(emqttd_auth_mod).
 
+-include("emqttd_auth_http.hrl").
+
 -include("../../../include/emqttd.hrl").
 
 -export([init/1, check/3, description/0]).
 
 -define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
 
-init(SuperReq, AuthReq) -> 
+init({SuperReq, AuthReq}) ->
     {ok, {SuperReq, AuthReq}}.
 
 check(#mqtt_client{username = Username}, _Password, _Env) when ?UNDEFINED(Username) ->
