@@ -33,7 +33,7 @@ init({SuperReq, AclReq}) ->
 check_acl({#mqtt_client{username = <<$$, _/binary>>}, _PubSub, _Topic}, _State) ->
     {error, bad_username};
 
-check_acl({Client, PubSub, Topic}, {SuperReq, #http_req{method = Method, url = Url, params = Params}}) ->
+check_acl({Client, PubSub, Topic}, {SuperReq, #http_request{method = Method, url = Url, params = Params}}) ->
     case is_superuser(SuperReq, Client) of
         false -> Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
                  case http_request(Method, Url, Params1) of
