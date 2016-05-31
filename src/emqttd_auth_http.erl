@@ -45,7 +45,7 @@ check(Client, Password, {SuperReq, #http_request{method = Method, url = Url, par
         false -> Params1 = feedvar(feedvar(Params, Client), "%P", Password),
                  case http_request(Method, Url, Params1) of
                     {ok, 200, _Body}  -> ok;
-                    {ok, _Code, Body} -> {error, Body};
+                    {ok, Code, _Body} -> {error, {http_code, Code}};
                     {error, Error}    -> lager:error("HTTP ~s Error: ~p", [Url, Error]),
                                          {error, Error}
                  end;
