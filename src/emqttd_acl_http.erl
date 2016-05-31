@@ -18,6 +18,8 @@
 
 -behaviour(emqttd_acl_mod).
 
+-include("emqttd_auth_http.hrl").
+
 -include("../../../include/emqttd.hrl").
 
 -import(emqttd_auth_http, [is_superuser/2, feedvar/2, feedvar/3]).
