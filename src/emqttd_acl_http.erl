@@ -22,7 +22,7 @@
 
 -include("../../../include/emqttd.hrl").
 
--import(emqttd_auth_http, [is_superuser/2, feedvar/2, feedvar/3]).
+-import(emqttd_auth_http, [http_request/3, feedvar/2, feedvar/3]).
 
 %% ACL callbacks
 -export([init/1, check_acl/2, reload_acl/1, description/0]).
@@ -34,7 +34,7 @@ check_acl({#mqtt_client{username = <<$$, _/binary>>}, _PubSub, _Topic}, _State) 
     {error, bad_username};
 
 check_acl({Client, PubSub, Topic}, {SuperReq, #http_request{method = Method, url = Url, params = Params}}) ->
-    case is_superuser(SuperReq, Client) of
+    case emqttd_auth_http:is_superuser(SuperReq, Client) of
         false -> Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
                  case http_request(Method, Url, Params1) of
                     {ok, 200, _Body}   -> allow;
@@ -43,6 +43,9 @@ check_acl({Client, PubSub, Topic}, {SuperReq, #http_request{method = Method, url
                  end;
         true  -> allow
     end.
+
+access(subscribe) -> 1;
+access(publish)   -> 2.
 
 reload_acl(_State) -> ok.
 
