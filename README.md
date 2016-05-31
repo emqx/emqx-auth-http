@@ -70,6 +70,7 @@ File: etc/plugin.config
   ]}
 
 ].
+```
 
 Load Plugin
 -----------
