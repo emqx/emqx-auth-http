@@ -44,8 +44,7 @@ register_auth_mod(SuperReq) ->
     emqttd_access_control:register_mod(auth, emqttd_auth_http, {SuperReq, record(AuthReq)}).
 
 register_acl_mod(SuperReq) ->
-    with_acl_enabled(fun(SuperReq) ->
-        {ok, AclReq} = application:get_env(?APP, acl_req),
+    with_acl_enabled(fun(AclReq) ->
         emqttd_access_control:register_mod(acl, emqttd_acl_http, {SuperReq, record(AclReq)})
     end).
 
