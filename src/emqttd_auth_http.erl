@@ -74,7 +74,7 @@ is_superuser(#http_request{method = Method, url = Url, params = Params}, MqttCli
 
 http_request(get, Url, Params) ->
     Req = {Url ++ "?" ++ mochiweb_util:urlencode(Params), []},
-    reply(httpc:request(post, Req, [{autoredirect, true}], []));
+    reply(httpc:request(get, Req, [{autoredirect, true}], []));
 
 http_request(post, Url, Params) ->
     Req = {Url, [], "application/x-www-form-urlencoded", mochiweb_util:urlencode(Params)},
