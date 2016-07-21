@@ -35,12 +35,13 @@
 %%--------------------------------------------------------------------
 
 start(_StartType, _StartArgs) ->
-    SuperReq = record(application:get_env(?APP, super_req, undefined)),
+    gen_conf:init(?APP),
+    SuperReq = record(gen_conf:value(?APP, super_req)),
     ok = register_auth_mod(SuperReq), ok = register_acl_mod(SuperReq),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 register_auth_mod(SuperReq) ->
-    {ok, AuthReq} = application:get_env(?APP, auth_req),
+    {ok, AuthReq} = gen_conf:value(?APP, auth_req),
     emqttd_access_control:register_mod(auth, emqttd_auth_http, {SuperReq, record(AuthReq)}).
 
 register_acl_mod(SuperReq) ->
@@ -76,7 +77,7 @@ record(Config) ->
     #http_request{method = Method, url = Url, params = Params}.
 
 with_acl_enabled(Fun) ->
-    case application:get_env(?APP, acl_req) of
+    case gen_conf:value(?APP, acl_req) of
         {ok, AclReq} -> Fun(AclReq);
         undefined    -> ok
     end.

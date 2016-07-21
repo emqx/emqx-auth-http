@@ -1,7 +1,7 @@
 
 PROJECT = emqttd_auth_http
 PROJECT_DESCRIPTION = Authentication/ACL with HTTP API
-PROJECT_VERSION = 1.1
+PROJECT_VERSION = 2.0
 
 DEPS = emqttd 
 
