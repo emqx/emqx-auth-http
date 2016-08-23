@@ -37,7 +37,8 @@
 start(_StartType, _StartArgs) ->
     gen_conf:init(?APP),
     SuperReq = record(gen_conf:value(?APP, super_req)),
-    ok = register_auth_mod(SuperReq), ok = register_acl_mod(SuperReq),
+    ok = register_auth_mod(SuperReq),
+    ok = register_acl_mod(SuperReq),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 register_auth_mod(SuperReq) ->
@@ -70,7 +71,7 @@ init([]) ->
 
 record(undefined) ->
     undefined;
-record(Config) ->
+record({ok, Config}) ->
     Method = proplists:get_value(method, Config, post),
     Url    = proplists:get_value(url, Config),
     Params = proplists:get_value(params, Config),

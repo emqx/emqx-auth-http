@@ -5,7 +5,7 @@ PROJECT_VERSION = 2.0
 
 DEPS = emqttd 
 
-dep_emqttd = git https://github.com/emqtt/emqttd plus
+dep_emqttd = git https://github.com/emqtt/emqttd emq20
 
 ERLC_OPTS += +'{parse_transform, lager_transform}'
 
