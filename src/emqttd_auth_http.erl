@@ -20,7 +20,7 @@
 
 -include("emqttd_auth_http.hrl").
 
--include("../../../include/emqttd.hrl").
+-include_lib("emqttd/include/emqttd.hrl").
 
 -export([is_superuser/2, http_request/3, feedvar/2, feedvar/3]).
 
