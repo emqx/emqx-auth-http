@@ -42,7 +42,7 @@ start(_StartType, _StartArgs) ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 register_auth_mod(SuperReq) ->
-    {ok, AuthReq} = gen_conf:value(?APP, auth_req),
+    AuthReq = gen_conf:value(?APP, auth_req),
     emqttd_access_control:register_mod(auth, emqttd_auth_http, {SuperReq, record(AuthReq)}).
 
 register_acl_mod(SuperReq) ->
