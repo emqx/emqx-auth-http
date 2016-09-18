@@ -79,7 +79,7 @@ record({ok, Config}) ->
 
 with_acl_enabled(Fun) ->
     case gen_conf:value(?APP, acl_req) of
-        {ok, AclReq} -> Fun(AclReq);
+        {ok, AclReq} -> Fun({ok, AclReq});
         undefined    -> ok
     end.
 
