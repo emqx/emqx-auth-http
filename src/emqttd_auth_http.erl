@@ -22,34 +22,26 @@
 
 -include_lib("emqttd/include/emqttd.hrl").
 
--export([is_superuser/2, http_request/3, feedvar/2, feedvar/3]).
-
+%% Callbacks
 -export([init/1, check/3, description/0]).
+
+-export([http_request/3, feedvar/2, feedvar/3]).
 
 -define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
 
-init({SuperReq, AuthReq}) ->
-    {ok, {SuperReq, AuthReq}}.
+init({AuthReq, SuperReq}) ->
+    {ok, {AuthReq, SuperReq}}.
 
-check(#mqtt_client{username = Username}, _Password, _Env) when ?UNDEFINED(Username) ->
-    {error, username_undefined};
+check(#mqtt_client{username = Username}, Password, _Env) when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
+    {error, username_or_password_undefined};
 
-check(Client, Password, {SuperReq, _}) when ?UNDEFINED(Password) ->
-    case is_superuser(SuperReq, Client) of
-        true  -> ok;
-        false -> {error, password_undefined}
-    end;
-
-check(Client, Password, {SuperReq, #http_request{method = Method, url = Url, params = Params}}) ->
-    case is_superuser(SuperReq, Client) of
-        false -> Params1 = feedvar(feedvar(Params, Client), "%P", Password),
-                 case http_request(Method, Url, Params1) of
-                    {ok, 200, _Body}  -> ok;
-                    {ok, Code, _Body} -> {error, {http_code, Code}};
-                    {error, Error}    -> lager:error("HTTP ~s Error: ~p", [Url, Error]),
-                                         {error, Error}
-                 end;
-        true  -> ok
+check(Client, Password, {#http_request{method = Method, url = Url, params = Params}, SuperReq}) ->
+    Params1 = feedvar(feedvar(Params, Client), "%P", Password),
+    case http_request(Method, Url, Params1) of
+        {ok, 200, _Body}  -> {ok, is_superuser(SuperReq, Client)};
+        {ok, Code, _Body} -> {error, {http_code, Code}};
+        {error, Error}    -> lager:error("HTTP ~s Error: ~p", [Url, Error]),
+                             {error, Error}
     end.
 
 description() -> "Authentication by HTTP API".
