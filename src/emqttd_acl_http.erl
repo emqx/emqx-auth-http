@@ -27,21 +27,18 @@
 %% ACL callbacks
 -export([init/1, check_acl/2, reload_acl/1, description/0]).
 
-init({SuperReq, AclReq}) ->
-    {ok, {SuperReq, AclReq}}.
+init(AclReq) ->
+    {ok, AclReq}.
 
-check_acl({#mqtt_client{username = <<$$, _/binary>>}, _PubSub, _Topic}, _State) ->
+check_acl({#mqtt_client{username = <<$$, _/binary>>}, _PubSub, _Topic}, _AclReq) ->
     {error, bad_username};
 
-check_acl({Client, PubSub, Topic}, {SuperReq, #http_request{method = Method, url = Url, params = Params}}) ->
-    case emqttd_auth_http:is_superuser(SuperReq, Client) of
-        false -> Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
-                 case http_request(Method, Url, Params1) of
-                    {ok, 200, _Body}   -> allow;
-                    {ok, _Code, _Body} -> deny;
-                    {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), deny
-                 end;
-        true  -> allow
+check_acl({Client, PubSub, Topic}, #http_request{method = Method, url = Url, params = Params}) ->
+    Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
+    case http_request(Method, Url, Params1) of
+        {ok, 200, _Body}   -> allow;
+        {ok, _Code, _Body} -> deny;
+        {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), deny
     end.
 
 access(subscribe) -> 1;

@@ -36,19 +36,14 @@
 
 start(_StartType, _StartArgs) ->
     gen_conf:init(?APP),
-    SuperReq = record(gen_conf:value(?APP, super_req)),
-    ok = register_auth_mod(SuperReq),
-    ok = register_acl_mod(SuperReq),
+    if_enabled(auth_req, fun(AuthReq) ->
+        SuperReq = r(gen_conf:value(?APP, super_req, undefined)),
+        emqttd_access_control:register_mod(auth, emqttd_auth_http, {AuthReq, SuperReq})
+    end),
+    if_enabled(acl_req, fun(AclReq) ->
+        emqttd_access_control:register_mod(acl, emqttd_acl_http, AclReq)
+    end),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
-
-register_auth_mod(SuperReq) ->
-    AuthReq = gen_conf:value(?APP, auth_req),
-    emqttd_access_control:register_mod(auth, emqttd_auth_http, {SuperReq, record(AuthReq)}).
-
-register_acl_mod(SuperReq) ->
-    with_acl_enabled(fun(AclReq) ->
-        emqttd_access_control:register_mod(acl, emqttd_acl_http, {SuperReq, record(AclReq)})
-    end).
 
 prep_stop(State) ->
     emqttd_access_control:unregister_mod(acl, emqttd_acl_http),
@@ -69,17 +64,17 @@ init([]) ->
 %% Internel Functions
 %%--------------------------------------------------------------------
 
-record(undefined) ->
+if_enabled(Key, Fun) ->
+    case gen_conf:value(?APP, Key) of
+        {ok, Req} -> Fun(r(Req));
+        undefined -> ok
+    end.
+
+r(undefined) ->
     undefined;
-record({ok, Config}) ->
+r(Config) ->
     Method = proplists:get_value(method, Config, post),
     Url    = proplists:get_value(url, Config),
     Params = proplists:get_value(params, Config),
     #http_request{method = Method, url = Url, params = Params}.
-
-with_acl_enabled(Fun) ->
-    case gen_conf:value(?APP, acl_req) of
-        {ok, AclReq} -> Fun({ok, AclReq});
-        undefined    -> ok
-    end.
 
