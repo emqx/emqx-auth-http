@@ -52,8 +52,9 @@ all() ->
 
 groups() -> 
     [{emqttd_auth_http, [sequence],
-    [check_acl,
-     check_auth]}].
+    [check_auth,
+     check_acl,
+     superUser]}].
 
 init_per_suite(Config) ->
     DataDir = proplists:get_value(data_dir, Config),
@@ -73,8 +74,8 @@ end_per_suite(_Config) ->
 
 check_acl(_) ->
     SuperUser = #mqtt_client{client_id = <<"superclient">>, username = <<"superuser">>, peername = {{127,0,0,1}, 2982}},
-    allow = emqttd_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
-    allow = emqttd_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
+    deny = emqttd_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
+    deny = emqttd_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
     
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
     UnIpUser1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{192,168,0,4}, 2981}},
@@ -100,15 +101,18 @@ check_auth(_) ->
     
     User3 = #mqtt_client{client_id = <<"client3">>, peername = {{127,0,0,1}, 2983}},
 
-    ok = emqttd_access_control:auth(User1, <<"pass1">>),
+    {ok, false} = emqttd_access_control:auth(User1, <<"pass1">>),
     {error, {http_code, _Code}} = emqttd_access_control:auth(User1, <<"pass">>),
-    {error, password_undefined} = emqttd_access_control:auth(User1, <<>>),
+    {error, username_or_password_undefined} = emqttd_access_control:auth(User1, <<>>),
     
-    ok = emqttd_access_control:auth(User2, <<"pass2">>),
-    {error, password_undefined} = emqttd_access_control:auth(User2, <<>>),
+    {ok, false} = emqttd_access_control:auth(User2, <<"pass2">>),
+    {error, username_or_password_undefined} = emqttd_access_control:auth(User2, <<>>),
     {error, {http_code, _Code}} = emqttd_access_control:auth(User2, <<"errorpwd">>),
     
     {error, _} = emqttd_access_control:auth(User3, <<"pwd">>).
+
+superuser(Config) ->
+
 
 
 %%%%%%%start http listen%%%%%%%%%%%%%%%%%%%%%
