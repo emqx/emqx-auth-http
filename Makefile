@@ -17,5 +17,5 @@ include erlang.mk
 app:: rebar.config
 
 app.config::
-	cuttlefish -l info -e etc/ -c etc/emq_auth_http.conf -i priv/emq_auth_http.schema -d .data
+	cuttlefish -l info -e etc/ -c etc/emq_auth_http.conf -i priv/emq_auth_http.schema -d data
 
