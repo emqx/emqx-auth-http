@@ -1,0 +1,61 @@
+%%-*- mode: erlang -*-
+%% emq_auth_http config
+{mapping, "emq.auth.http.authreq", "emq_auth_http.authreq", [
+  {datatype, string}
+]}.
+
+{mapping, "emq.auth.http.authreq.method", "emq_auth_http.authreq", [
+  {default, post},
+  {datatype, {enum, [post, get]}}
+]}.
+
+{mapping, "emq.auth.http.authreq.params", "emq_auth_http.authreq", [
+  {datatype, string}
+]}.
+
+{translation, "emq_auth_http.authreq", fun(Conf) ->
+  Params = cuttlefish:conf_get("emq.auth.http.authreq.params", Conf),
+  [{url, cuttlefish:conf_get("emq.auth.http.authreq", Conf)},
+   {method, cuttlefish:conf_get("emq.auth.http.authreq.method", Conf)},
+   {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
+end}.
+
+{mapping, "emq.auth.http.super_req", "emq_auth_http.super_req", [
+  {datatype, string}
+]}.
+
+{mapping, "emq.auth.http.super_req.method", "emq_auth_http.super_req", [
+  {default, post},
+  {datatype, {enum, [post, get]}}
+]}.
+
+{mapping, "emq.auth.http.super_req.params", "emq_auth_http.super_req", [
+  {datatype, string}
+]}.
+
+{translation, "emq_auth_http.super_req", fun(Conf) ->
+  Params = cuttlefish:conf_get("emq.auth.http.super_req.params", Conf),
+  [{url, cuttlefish:conf_get("emq.auth.http.super_req", Conf)},
+   {method, cuttlefish:conf_get("emq.auth.http.super_req.method", Conf)},
+   {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
+end}.
+
+{mapping, "emq.auth.http.aclreq", "emq_auth_http.aclreq", [
+  {datatype, string}
+]}.
+
+{mapping, "emq.auth.http.aclreq.method", "emq_auth_http.aclreq", [
+  {default, post},
+  {datatype, {enum, [post, get]}}
+]}.
+
+{mapping, "emq.auth.http.aclreq.params", "emq_auth_http.aclreq", [
+  {datatype, string}
+]}.
+
+{translation, "emq_auth_http.aclreq", fun(Conf) ->
+  Params = cuttlefish:conf_get("emq.auth.http.aclreq.params", Conf),
+  [{url, cuttlefish:conf_get("emq.auth.http.aclreq", Conf)},
+   {method, cuttlefish:conf_get("emq.auth.http.aclreq.method", Conf)},
+   {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
+end}.
