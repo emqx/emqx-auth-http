@@ -53,8 +53,7 @@ all() ->
 groups() -> 
     [{emqttd_auth_http, [sequence],
     [check_auth,
-     check_acl,
-     superUser]}].
+     check_acl]}].
 
 init_per_suite(Config) ->
     DataDir = proplists:get_value(data_dir, Config),
@@ -110,9 +109,6 @@ check_auth(_) ->
     {error, {http_code, _Code}} = emqttd_access_control:auth(User2, <<"errorpwd">>),
     
     {error, _} = emqttd_access_control:auth(User3, <<"pwd">>).
-
-superuser(Config) ->
-
 
 
 %%%%%%%start http listen%%%%%%%%%%%%%%%%%%%%%
