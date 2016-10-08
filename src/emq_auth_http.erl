@@ -60,24 +60,6 @@ is_superuser(#http_request{method = Method, url = Url, params = Params}, MqttCli
         {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), false
     end.
 
-%%--------------------------------------------------------------------
-%% HTTP Request
-%%--------------------------------------------------------------------
-
-http_request(get, Url, Params) ->
-    Req = {Url ++ "?" ++ mochiweb_util:urlencode(Params), []},
-    reply(httpc:request(get, Req, [{autoredirect, true}], []));
-
-http_request(post, Url, Params) ->
-    Req = {Url, [], "application/x-www-form-urlencoded", mochiweb_util:urlencode(Params)},
-    reply(httpc:request(post, Req, [{autoredirect, true}], [])).
-
-reply({ok, {{_, Code, _}, _Headers, Body}}) ->
-    {ok, Code, Body};
-reply({ok, Code, Body}) ->
-    {ok, Code, Body};
-reply({error, Error}) ->
-    {error, Error}.
 
 feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, peername = {IpAddr, _}}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
@@ -88,4 +70,3 @@ feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, peername
 
 feedvar(Params, Var, Val) ->
     lists:map(fun({Param, Var0}) when Var0 == Var -> {Param, Val}; (Param) -> Param end, Params).
-
