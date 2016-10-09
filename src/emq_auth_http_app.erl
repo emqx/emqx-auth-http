@@ -39,10 +39,10 @@ start(_StartType, _StartArgs) ->
 
 reg_authmod(AuthReq) ->
     SuperReq = r(application:get_env(?APP, super_req, undefined)),
-    emqttd_access_control:register_mod(auth, emqttd_auth_http, {AuthReq, SuperReq})
+    emqttd_access_control:register_mod(auth, emq_auth_http, {AuthReq, SuperReq}).
 
 reg_aclmod(AclReq) ->
-    emqttd_access_control:register_mod(acl, emqttd_acl_http, AclReq)
+    emqttd_access_control:register_mod(acl, emq_acl_http, AclReq).
 
 stop(_State) ->
     emqttd_access_control:unregister_mod(acl, emq_acl_http),

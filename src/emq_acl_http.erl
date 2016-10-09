@@ -32,7 +32,7 @@ init(AclReq) ->
 
 check_acl({Client, PubSub, Topic}, #http_request{method = Method, url = Url, params = Params}) ->
     Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
-    case http_request(Method, Url, Params1) of
+    case request(Method, Url, Params1) of
         {ok, 200, _Body}   -> allow;
         {ok, _Code, _Body} -> deny;
         {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), deny
@@ -43,5 +43,5 @@ access(publish)   -> 2.
 
 reload_acl(_State) -> ok.
 
-description() -> "ACL by HTTP API".
+description() -> "ACL with HTTP API".
 
