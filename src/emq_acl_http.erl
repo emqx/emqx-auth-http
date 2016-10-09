@@ -14,15 +14,15 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------
 
--module(emqttd_acl_http).
+-module(emq_acl_http).
 
 -behaviour(emqttd_acl_mod).
 
--include("emqttd_auth_http.hrl").
+-include("emq_auth_http.hrl").
 
 -include_lib("emqttd/include/emqttd.hrl").
 
--import(emqttd_auth_http, [http_request/3, feedvar/2, feedvar/3]).
+-import(emq_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
 
 %% ACL callbacks
 -export([init/1, check_acl/2, reload_acl/1, description/0]).
@@ -30,12 +30,9 @@
 init(AclReq) ->
     {ok, AclReq}.
 
-check_acl({#mqtt_client{username = <<$$, _/binary>>}, _PubSub, _Topic}, _AclReq) ->
-    {error, bad_username};
-
 check_acl({Client, PubSub, Topic}, #http_request{method = Method, url = Url, params = Params}) ->
     Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
-    case http_request(Method, Url, Params1) of
+    case request(Method, Url, Params1) of
         {ok, 200, _Body}   -> allow;
         {ok, _Code, _Body} -> deny;
         {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), deny
@@ -46,5 +43,5 @@ access(publish)   -> 2.
 
 reload_acl(_State) -> ok.
 
-description() -> "ACL by HTTP API".
+description() -> "ACL with HTTP API".
 

@@ -14,18 +14,19 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------
 
--module(emqttd_auth_http).
+-module(emq_auth_http).
 
 -behaviour(emqttd_auth_mod).
 
--include("emqttd_auth_http.hrl").
+-include("emq_auth_http.hrl").
 
 -include_lib("emqttd/include/emqttd.hrl").
+
+-import(emq_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
 
 %% Callbacks
 -export([init/1, check/3, description/0]).
 
--export([http_request/3, feedvar/2, feedvar/3]).
 
 -define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
 
@@ -37,7 +38,7 @@ check(#mqtt_client{username = Username}, Password, _Env) when ?UNDEFINED(Usernam
 
 check(Client, Password, {#http_request{method = Method, url = Url, params = Params}, SuperReq}) ->
     Params1 = feedvar(feedvar(Params, Client), "%P", Password),
-    case http_request(Method, Url, Params1) of
+    case request(Method, Url, Params1) of
         {ok, 200, _Body}  -> {ok, is_superuser(SuperReq, Client)};
         {ok, Code, _Body} -> {error, {http_code, Code}};
         {error, Error}    -> lager:error("HTTP ~s Error: ~p", [Url, Error]),
@@ -54,38 +55,9 @@ description() -> "Authentication by HTTP API".
 is_superuser(undefined, _MqttClient) ->
     false;
 is_superuser(#http_request{method = Method, url = Url, params = Params}, MqttClient) ->
-    case http_request(Method, Url, feedvar(Params, MqttClient)) of
+    case request(Method, Url, feedvar(Params, MqttClient)) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
         {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), false
     end.
-
-%%--------------------------------------------------------------------
-%% HTTP Request
-%%--------------------------------------------------------------------
-
-http_request(get, Url, Params) ->
-    Req = {Url ++ "?" ++ mochiweb_util:urlencode(Params), []},
-    reply(httpc:request(get, Req, [{autoredirect, true}], []));
-
-http_request(post, Url, Params) ->
-    Req = {Url, [], "application/x-www-form-urlencoded", mochiweb_util:urlencode(Params)},
-    reply(httpc:request(post, Req, [{autoredirect, true}], [])).
-
-reply({ok, {{_, Code, _}, _Headers, Body}}) ->
-    {ok, Code, Body};
-reply({ok, Code, Body}) ->
-    {ok, Code, Body};
-reply({error, Error}) ->
-    {error, Error}.
-
-feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, peername = {IpAddr, _}}) ->
-    lists:map(fun({Param, "%u"}) -> {Param, Username};
-                 ({Param, "%c"}) -> {Param, ClientId};
-                 ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
-                 (Param)         -> Param
-              end, Params).
-
-feedvar(Params, Var, Val) ->
-    lists:map(fun({Param, Var0}) when Var0 == Var -> {Param, Val}; (Param) -> Param end, Params).
 
