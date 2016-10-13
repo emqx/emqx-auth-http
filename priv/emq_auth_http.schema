@@ -1,22 +1,22 @@
 %%-*- mode: erlang -*-
 %% emq_auth_http config mapping
-{mapping, "auth.http.authreq", "emq_auth_http.authreq", [
+{mapping, "auth.http.auth_req", "emq_auth_http.auth_req", [
   {datatype, string}
 ]}.
 
-{mapping, "auth.http.authreq.method", "emq_auth_http.authreq", [
+{mapping, "auth.http.auth_req.method", "emq_auth_http.auth_req", [
   {default, post},
   {datatype, {enum, [post, get]}}
 ]}.
 
-{mapping, "auth.http.authreq.params", "emq_auth_http.authreq", [
+{mapping, "auth.http.auth_req.params", "emq_auth_http.auth_req", [
   {datatype, string}
 ]}.
 
-{translation, "emq_auth_http.authreq", fun(Conf) ->
-  Params = cuttlefish:conf_get("auth.http.authreq.params", Conf),
-  [{url, cuttlefish:conf_get("auth.http.authreq", Conf)},
-   {method, cuttlefish:conf_get("auth.http.authreq.method", Conf)},
+{translation, "emq_auth_http.auth_req", fun(Conf) ->
+  Params = cuttlefish:conf_get("auth.http.auth_req.params", Conf),
+  [{url, cuttlefish:conf_get("auth.http.auth_req", Conf)},
+   {method, cuttlefish:conf_get("auth.http.auth_req.method", Conf)},
    {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
 end}.
 
@@ -40,23 +40,23 @@ end}.
    {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
 end}.
 
-{mapping, "auth.http.aclreq", "emq_auth_http.aclreq", [
+{mapping, "auth.http.acl_req", "emq_auth_http.acl_req", [
   {datatype, string}
 ]}.
 
-{mapping, "auth.http.aclreq.method", "emq_auth_http.aclreq", [
+{mapping, "auth.http.acl_req.method", "emq_auth_http.acl_req", [
   {default, post},
   {datatype, {enum, [post, get]}}
 ]}.
 
-{mapping, "auth.http.aclreq.params", "emq_auth_http.aclreq", [
+{mapping, "auth.http.acl_req.params", "emq_auth_http.acl_req", [
   {datatype, string}
 ]}.
 
-{translation, "emq_auth_http.aclreq", fun(Conf) ->
-  Params = cuttlefish:conf_get("auth.http.aclreq.params", Conf),
-  [{url, cuttlefish:conf_get("auth.http.aclreq", Conf)},
-   {method, cuttlefish:conf_get("auth.http.aclreq.method", Conf)},
+{translation, "emq_auth_http.acl_req", fun(Conf) ->
+  Params = cuttlefish:conf_get("auth.http.acl_req.params", Conf),
+  [{url, cuttlefish:conf_get("auth.http.acl_req", Conf)},
+   {method, cuttlefish:conf_get("auth.http.acl_req.method", Conf)},
    {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
 end}.
 
