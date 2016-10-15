@@ -14,7 +14,7 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------
 
--module(emqttd_auth_http_SUITE).
+-module(emq_auth_http_SUITE).
 
 -compile(export_all).
 
@@ -48,20 +48,17 @@
               ]).
 
 all() -> 
-    [{group, emqttd_auth_http}].
+    [{group, emq_auth_http}].
 
 groups() -> 
-    [{emqttd_auth_http, [sequence],
+    [{emq_auth_http, [sequence],
     [check_acl,
      check_auth]}].
 
 init_per_suite(Config) ->
     DataDir = proplists:get_value(data_dir, Config),
     application:start(lager),
-    application:set_env(emqttd, conf, filename:join([DataDir, "emqttd.conf"])),
-    application:ensure_all_started(emqttd),
-    application:set_env(emqttd_auth_http, conf, filename:join([DataDir, "emqttd_auth_http.conf"])),
-    application:ensure_all_started(emqttd_auth_http),
+    [start_apps(App, DataDir) || App <- [emqttd, emq_auth_http]],
     start_http_(),
     Config.
 
@@ -73,8 +70,8 @@ end_per_suite(_Config) ->
 
 check_acl(_) ->
     SuperUser = #mqtt_client{client_id = <<"superclient">>, username = <<"superuser">>, peername = {{127,0,0,1}, 2982}},
-    allow = emqttd_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
-    allow = emqttd_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
+    deny = emqttd_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
+    deny = emqttd_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
     
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
     UnIpUser1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{192,168,0,4}, 2981}},
@@ -100,12 +97,12 @@ check_auth(_) ->
     
     User3 = #mqtt_client{client_id = <<"client3">>, peername = {{127,0,0,1}, 2983}},
 
-    ok = emqttd_access_control:auth(User1, <<"pass1">>),
+    {ok, false} = emqttd_access_control:auth(User1, <<"pass1">>),
     {error, {http_code, _Code}} = emqttd_access_control:auth(User1, <<"pass">>),
-    {error, password_undefined} = emqttd_access_control:auth(User1, <<>>),
+    {error, username_or_password_undefined} = emqttd_access_control:auth(User1, <<>>),
     
-    ok = emqttd_access_control:auth(User2, <<"pass2">>),
-    {error, password_undefined} = emqttd_access_control:auth(User2, <<>>),
+    {ok, false} = emqttd_access_control:auth(User2, <<"pass2">>),
+    {error, username_or_password_undefined} = emqttd_access_control:auth(User2, <<>>),
     {error, {http_code, _Code}} = emqttd_access_control:auth(User2, <<"errorpwd">>),
     
     {error, _} = emqttd_access_control:auth(User3, <<"pwd">>).
@@ -165,5 +162,14 @@ reply(Req, Result) ->
     deny ->
         Req:respond({404, [{"Content-Type", "text/plain"}], []})
     end.
+
+start_apps(App, DataDir) ->
+    Schema = cuttlefish_schema:files([filename:join([DataDir, atom_to_list(App) ++ ".schema"])]),
+    Conf = conf_parse:file(filename:join([DataDir, atom_to_list(App) ++ ".conf"])),
+    NewConfig = cuttlefish_generator:map(Schema, Conf),
+    ct:log("NewConfig:~p", [NewConfig]),
+    Vals = proplists:get_value(App, NewConfig),
+    [application:set_env(App, Par, Value) || {Par, Value} <- Vals],
+    application:ensure_all_started(App).
 
 
