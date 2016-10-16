@@ -1,8 +1,7 @@
-
 emq_auth_http
 =============
 
-HTTP Auth/ACL Plugin for EMQ 3.0
+HTTP Auth/ACL Plugin for EMQ Broker
 
 Build
 -----
