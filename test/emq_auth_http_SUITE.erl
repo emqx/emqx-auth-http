@@ -14,7 +14,7 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------
 
--module(emqttd_auth_http_SUITE).
+-module(emq_auth_http_SUITE).
 
 -compile(export_all).
 
@@ -48,20 +48,18 @@
               ]).
 
 all() -> 
-    [{group, emqttd_auth_http}].
+    [{group, emq_auth_http}].
 
 groups() -> 
-    [{emqttd_auth_http, [sequence],
-    [check_auth,
-     check_acl]}].
+    [{emq_auth_http, [sequence],
+    [check_acl,
+     check_auth]}].
 
 init_per_suite(Config) ->
     DataDir = proplists:get_value(data_dir, Config),
     application:start(lager),
-    application:set_env(emqttd, conf, filename:join([DataDir, "emqttd.conf"])),
-    application:ensure_all_started(emqttd),
-    application:set_env(emqttd_auth_http, conf, filename:join([DataDir, "emqttd_auth_http.conf"])),
-    application:ensure_all_started(emqttd_auth_http),
+    peg_com(DataDir),
+    [start_apps(App, DataDir) || App <- [emqttd, emq_auth_http]],
     start_http_(),
     Config.
 
@@ -165,5 +163,32 @@ reply(Req, Result) ->
     deny ->
         Req:respond({404, [{"Content-Type", "text/plain"}], []})
     end.
+
+start_apps(App, DataDir) ->
+    Schema = cuttlefish_schema:files([filename:join([DataDir, atom_to_list(App) ++ ".schema"])]),
+    Conf = conf_parse:file(filename:join([DataDir, atom_to_list(App) ++ ".conf"])),
+    NewConfig = cuttlefish_generator:map(Schema, Conf),
+    Vals = proplists:get_value(App, NewConfig),
+    [application:set_env(App, Par, Value) || {Par, Value} <- Vals],
+    application:ensure_all_started(App).
+
+peg_com(DataDir) ->
+    ParsePeg = file2(3, DataDir, "conf_parse.peg"),
+    neotoma:file(ParsePeg),
+    ParseErl = file2(3, DataDir, "conf_parse.erl"),
+    compile:file(ParseErl, []),
+
+    DurationPeg = file2(3, DataDir, "cuttlefish_duration_parse.peg"),
+    neotoma:file(DurationPeg),
+    DurationErl = file2(3, DataDir, "cuttlefish_duration_parse.erl"),
+    compile:file(DurationErl, []).
+    
+
+file2(Times, Dir, FileName) when Times < 1 ->
+    filename:join([Dir, "deps", "cuttlefish","src", FileName]);
+
+file2(Times, Dir, FileName) ->
+    Dir1 = filename:dirname(Dir),
+    file2(Times - 1, Dir1, FileName).
 
 

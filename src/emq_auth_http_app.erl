@@ -14,44 +14,41 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------
 
--module(emqttd_auth_http_app).
+-module(emq_auth_http_app).
 
 -behaviour(application).
 
--include("emqttd_auth_http.hrl").
+-include("emq_auth_http.hrl").
 
-%% Application callbacks
--export([start/2, prep_stop/1, stop/1]).
+-export([start/2, stop/1]).
 
 -behaviour(supervisor).
 
-%% Supervisor callbacks
 -export([init/1]).
 
--define(APP, emqttd_auth_http).
+-define(APP, emq_auth_http).
 
 %%--------------------------------------------------------------------
 %% Application Callbacks
 %%--------------------------------------------------------------------
 
 start(_StartType, _StartArgs) ->
-    gen_conf:init(?APP),
-    if_enabled(auth_req, fun(AuthReq) ->
-        SuperReq = r(gen_conf:value(?APP, super_req, undefined)),
-        emqttd_access_control:register_mod(auth, emqttd_auth_http, {AuthReq, SuperReq})
-    end),
-    if_enabled(acl_req, fun(AclReq) ->
-        emqttd_access_control:register_mod(acl, emqttd_acl_http, AclReq)
-    end),
+    with_env(auth_req, fun reg_authmod/1),
+    with_env(acl_req,  fun reg_aclmod/1),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-prep_stop(State) ->
-    emqttd_access_control:unregister_mod(acl, emqttd_acl_http),
-    emqttd_access_control:unregister_mod(auth, emqttd_auth_http),
-    State.
+reg_authmod(AuthReq) ->
+    SuperReq = r(application:get_env(?APP, super_req, undefined)),
+    emqttd_access_control:register_mod(auth, emq_auth_http, {AuthReq, SuperReq}).
+
+reg_aclmod(AclReq) ->
+    {ok, AclNomatch} = application:get_env(?APP, acl_nomatch),
+    AclEnv = {AclReq, AclNomatch},
+    emqttd_access_control:register_mod(acl, emq_acl_http, AclEnv).
 
 stop(_State) ->
-    ok.
+    emqttd_access_control:unregister_mod(acl, emq_acl_http),
+    emqttd_access_control:unregister_mod(auth, emq_auth_http).
 
 %%--------------------------------------------------------------------
 %% Dummy Supervisor
@@ -64,8 +61,8 @@ init([]) ->
 %% Internel Functions
 %%--------------------------------------------------------------------
 
-if_enabled(Key, Fun) ->
-    case gen_conf:value(?APP, Key) of
+with_env(Par, Fun) ->
+    case application:get_env(?APP, Par) of
         {ok, Req} -> Fun(r(Req));
         undefined -> ok
     end.
