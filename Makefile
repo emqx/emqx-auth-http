@@ -1,6 +1,6 @@
 PROJECT = emq_auth_http
 PROJECT_DESCRIPTION = Authentication/ACL with HTTP API
-PROJECT_VERSION = 2.0
+PROJECT_VERSION = 2.0.1
 
 BUILD_DEPS = emqttd
 dep_emqttd = git https://github.com/emqtt/emqttd master
