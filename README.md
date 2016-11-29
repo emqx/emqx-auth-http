@@ -1,7 +1,7 @@
 emq_auth_http
 =============
 
-HTTP Auth/ACL Plugin for EMQ Broker
+HTTP Auth/ACL Plugin for *EMQ* Broker
 
 Build
 -----
@@ -10,8 +10,8 @@ Build
 make && make tests
 ```
 
-Configuration
--------------
+Configure the Plugin
+--------------------
 
 File: etc/emq_auth_http.conf
 
