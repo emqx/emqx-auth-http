@@ -4,13 +4,15 @@ PROJECT_VERSION = 2.0.1
 
 BUILD_DEPS = emqttd
 dep_emqttd = git https://github.com/emqtt/emqttd emq20
+ERLC_OPTS += +'{parse_transform, lager_transform}'
 
 TEST_DEPS = cuttlefish
 dep_cuttlefish = git https://github.com/emqtt/cuttlefish
 
 NO_AUTOPATCH = cuttlefish
 
-ERLC_OPTS += +'{parse_transform, lager_transform}'
+TEST_ERLC_OPTS += +debug_info
+TEST_ERLC_OPTS += +'{parse_transform, lager_transform}'
 
 COVER = true
 

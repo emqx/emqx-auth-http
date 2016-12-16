@@ -110,10 +110,10 @@ check_auth(_) ->
 
 restart_httpserver(_) ->
     mochiweb:stop_http(8080),
-    start_http_(),
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
+    deny = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
+    start_http_(),
     allow = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>).
-
 %%%%%%%start http listen%%%%%%%%%%%%%%%%%%%%%
 start_http_() ->
      mochiweb:start_http(8080, [{max_clients, 1024}, {acceptors, 2}],
