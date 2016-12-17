@@ -12,3 +12,7 @@ rel/example_project
 emq_auth_http.d
 data
 ct.cover.spec
+cover/
+ct.coverdata
+eunit.coverdata
+logs/
