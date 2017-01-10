@@ -63,12 +63,10 @@ init([]) ->
 
 with_env(Par, Fun) ->
     case application:get_env(?APP, Par) of
-        {ok, undefined} -> ok;
+        undefined -> ok;
         {ok, Req} -> Fun(r(Req))
     end.
 
-r(undefined) ->
-    undefined;
 r(Config) ->
     Method = proplists:get_value(method, Config, post),
     Url    = proplists:get_value(url, Config),
