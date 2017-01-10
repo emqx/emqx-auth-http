@@ -63,8 +63,8 @@ init([]) ->
 
 with_env(Par, Fun) ->
     case application:get_env(?APP, Par) of
-        {ok, Req} -> Fun(r(Req));
-        undefined -> ok
+        {ok, undefined} -> ok;
+        {ok, Req} -> Fun(r(Req))
     end.
 
 r(undefined) ->
