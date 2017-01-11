@@ -1,5 +1,5 @@
 %%--------------------------------------------------------------------
-%% Copyright (c) 2016 Feng Lee <feng@emqtt.io>.
+%% Copyright (c) 2016-2017 Feng Lee <feng@emqtt.io>.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -63,12 +63,10 @@ init([]) ->
 
 with_env(Par, Fun) ->
     case application:get_env(?APP, Par) of
-        {ok, Req} -> Fun(r(Req));
-        undefined -> ok
+        undefined -> ok;
+        {ok, Req} -> Fun(r(Req))
     end.
 
-r(undefined) ->
-    undefined;
 r(Config) ->
     Method = proplists:get_value(method, Config, post),
     Url    = proplists:get_value(url, Config),
