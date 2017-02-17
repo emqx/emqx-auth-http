@@ -22,6 +22,8 @@
 
 -include_lib("common_test/include/ct.hrl").
 
+-include_lib("eunit/include/eunit.hrl").
+
 -define(SUPERUSER, [[{"username", "superuser"},
                      {"clientid", "superclient"}]]).
 
@@ -35,7 +37,17 @@
               {"clientid", "client2"},
               {"access", "2"},
               {"topic", "a/b/c"},
-              {"ipaddr", "192.168.1.3"}]
+              {"ipaddr", "192.168.1.3"}],
+            [{"username", "testuser1"},
+              {"clientid", "client1"},
+              {"access", "2"},
+              {"topic", "topic"},
+              {"ipaddr", "127.0.0.1"}],
+            [{"username", "testuser2"},
+              {"clientid", "client2"},
+              {"access", "1"},
+              {"topic", "topic"},
+              {"ipaddr", "127.0.0.1"}]
              ]).
 
 -define(AUTH, [
@@ -54,20 +66,20 @@ groups() ->
     [{emq_auth_http, [sequence],
     [check_acl,
      check_auth,
-     restart_httpserver]}].
+     restart_httpserver,
+     sub_pub]}].
 
 init_per_suite(Config) ->
     DataDir = proplists:get_value(data_dir, Config),
-    application:start(lager),
-    [start_apps(App, DataDir) || App <- [emqttd, emq_auth_http]],
+    [start_apps(App, DataDir) || App <- [emqttd, emq_auth_http, emq_retainer]],
     start_http_(),
     Config.
 
 end_per_suite(_Config) ->
     mochiweb:stop_http(8080),
-    application:stop(emqttd_auth_http),
-    application:stop(emqttd),
-    emqttd_mnesia:ensure_stopped().
+    application:stop(emq_retainer),
+    application:stop(emq_auth_http),
+    application:stop(emqttd).
 
 check_acl(_) ->
     SuperUser = #mqtt_client{client_id = <<"superclient">>, username = <<"superuser">>, peername = {{127,0,0,1}, 2982}},
@@ -114,15 +126,29 @@ restart_httpserver(_) ->
     deny = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
     start_http_(),
     allow = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>).
+
+sub_pub(_) ->
+    {ok, T1} = emqttc:start_link([{host, "localhost"}, {client_id, <<"client1">>}, {username, <<"testuser1">>}, {password, <<"pass1">>}]),
+    emqttc:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
+    timer:sleep(1000),
+    {ok, T2} = emqttc:start_link([{host, "localhost"}, {client_id, <<"client2">>}, {username, <<"testuser2">>}, {password, <<"pass2">>}]),
+    emqttc:subscribe(T2, <<"topic">>),
+    receive
+        {publish, Topic, Payload} ->
+            ?assertEqual(<<"body">>, Payload)
+        after 1000 -> false end,
+    emqttc:disconnect(T1),
+    emqttc:disconnect(T2).
+
+
 %%%%%%%start http listen%%%%%%%%%%%%%%%%%%%%%
 start_http_() ->
-     mochiweb:start_http(8080, [{max_clients, 1024}, {acceptors, 2}],
+    mochiweb:start_http(8080, [{max_clients, 1024}, {acceptors, 1024}],
                         {?MODULE, handle, []}).
 
 handle(Req) ->
     Path = Req:get(path),
     Params = params(Req),
-    ct:log("Path:~p, Params:~p", [Path, Params]),
     handle_(Path, Params, Req).
 
 handle_("/mqtt/superuser", Params, Req) ->

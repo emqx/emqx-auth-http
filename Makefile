@@ -11,6 +11,10 @@ ERLC_OPTS += +'{parse_transform, lager_transform}'
 
 NO_AUTOPATCH = cuttlefish
 
+TEST_DEPS = emqttc emq_retainer
+dep_emqttc = git https://github.com/emqtt/emqttc.git master
+dep_emq_retainer  = git https://github.com/emqtt/emq-retainer master
+
 TEST_ERLC_OPTS += +debug_info
 TEST_ERLC_OPTS += +'{parse_transform, lager_transform}'
 
