@@ -67,6 +67,9 @@ with_env(Par, Fun) ->
         {ok, Req} -> Fun(r(Req))
     end.
 
+r(undefined) ->
+    undefined;
+
 r(Config) ->
     Method = proplists:get_value(method, Config, post),
     Url    = proplists:get_value(url, Config),
