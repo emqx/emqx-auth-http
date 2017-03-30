@@ -27,18 +27,17 @@
 %% ACL callbacks
 -export([init/1, check_acl/2, reload_acl/1, description/0]).
 
--record(state, {acl_req, acl_nomatch}).
+-record(state, {acl_req}).
 
-init({AclReq, AclNomatch}) ->
-	{ok, #state{acl_req = AclReq, acl_nomatch = AclNomatch}}.
+init(AclReq) ->
+	{ok, #state{acl_req = AclReq}}.
  
-check_acl({Client, PubSub, Topic}, #state{acl_req = #http_request{method = Method, url = Url, params = Params}, 
-                                          acl_nomatch = AclNomatch}) ->
+check_acl({Client, PubSub, Topic}, #state{acl_req = #http_request{method = Method, url = Url, params = Params}}) ->
     Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
     case request(Method, Url, Params1) of
         {ok, 200, _Body}   -> allow;
-        {ok, _Code, _Body} -> deny;
-        {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), AclNomatch
+        {ok, _Code, _Body} -> ignore;
+        {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), deny
     end.
 
 access(subscribe) -> 1;
