@@ -43,10 +43,11 @@ reply({error, Error}) ->
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, peername = {IpAddr, _}}) ->
+feedvar(Params, #mqtt_client{username = Username, client_id = ClientId,  ws_initial_headers = WsInitialHeaders, peername = {IpAddr, _}}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
                  ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
+                 ({Param, "%h"}) -> {Param, mochijson2:encode(WsInitialHeaders)};
                  (Param)         -> Param
               end, Params).
 
