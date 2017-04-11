@@ -43,10 +43,20 @@ reply({error, Error}) ->
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, peername = {IpAddr, _}}) ->
+feedWsHeader(WsInitialHeaders)  when is_list(WsInitialHeaders) ->
+    F = fun ({K, V}) ->
+                lists:flatten(io_lib:format("~s: ~s", [K, V]))
+        end,
+    string:join(lists:map(F, WsInitialHeaders), "\r\n");
+
+feedWsHeader(WsInitialHeaders) when not is_list(WsInitialHeaders) ->
+    undefined.
+
+feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, ws_initial_headers = WsInitialHeaders, peername = {IpAddr, _}}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
                  ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
+                 ({Param, "%h"}) -> {Param, feedWsHeader(WsInitialHeaders)};
                  (Param)         -> Param
               end, Params).
 
