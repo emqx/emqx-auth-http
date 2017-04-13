@@ -1,6 +1,6 @@
 PROJECT = emq_auth_http
 PROJECT_DESCRIPTION = Authentication/ACL with HTTP API
-PROJECT_VERSION = 2.1.0
+PROJECT_VERSION = 2.1.1
 
 BUILD_DEPS = emqttd cuttlefish
 
