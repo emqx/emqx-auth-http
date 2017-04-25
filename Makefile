@@ -1,15 +1,19 @@
 PROJECT = emq_auth_http
 PROJECT_DESCRIPTION = Authentication/ACL with HTTP API
-PROJECT_VERSION = 2.1.2
+PROJECT_VERSION = 2.2
 
 BUILD_DEPS = emqttd cuttlefish
 
-dep_emqttd = git https://github.com/emqtt/emqttd develop
+dep_emqttd = git https://github.com/emqtt/emqttd emq22
 dep_cuttlefish = git https://github.com/emqtt/cuttlefish
 
 ERLC_OPTS += +'{parse_transform, lager_transform}'
 
 NO_AUTOPATCH = cuttlefish
+
+TEST_DEPS = emqttc emq_retainer
+dep_emqttc = git https://github.com/emqtt/emqttc.git master
+dep_emq_retainer  = git https://github.com/emqtt/emq-retainer master
 
 TEST_ERLC_OPTS += +debug_info
 TEST_ERLC_OPTS += +'{parse_transform, lager_transform}'
