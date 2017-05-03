@@ -24,6 +24,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-define(APP, emq_auth_http).
+
 -define(SUPERUSER, [[{"username", "superuser"},
                      {"clientid", "superclient"}]]).
 
@@ -67,7 +69,9 @@ groups() ->
     [check_acl,
      check_auth,
      restart_httpserver,
-     sub_pub]}].
+     sub_pub,
+     comment_config
+    ]}].
 
 init_per_suite(Config) ->
     DataDir = proplists:get_value(data_dir, Config),
@@ -83,27 +87,29 @@ end_per_suite(_Config) ->
 
 check_acl(_) ->
     SuperUser = #mqtt_client{client_id = <<"superclient">>, username = <<"superuser">>, peername = {{127,0,0,1}, 2982}},
-    deny = emqttd_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
-    deny = emqttd_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
+    {ok, Default} = application:get_env(emqttd, acl_nomatch),
+    Default = emqttd_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
+    Default = emqttd_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
     
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
     UnIpUser1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{192,168,0,4}, 2981}},
     UnClientIdUser1 = #mqtt_client{client_id = <<"unkonwc">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
     UnnameUser1= #mqtt_client{client_id = <<"client1">>, username = <<"unuser">>, peername = {{127,0,0,1}, 2981}},
     allow = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
-    deny = emqttd_access_control:check_acl(User1, publish, <<"users/testuser/1">>),
-    deny = emqttd_access_control:check_acl(UnIpUser1, subscribe, <<"users/testuser/1">>),
-    deny = emqttd_access_control:check_acl(UnClientIdUser1, subscribe, <<"users/testuser/1">>),
-    deny  = emqttd_access_control:check_acl(UnnameUser1, subscribe, <<"$SYS/testuser/1">>),
+    Default  = emqttd_access_control:check_acl(User1, publish, <<"users/testuser/1">>),
+    Default = emqttd_access_control:check_acl(UnIpUser1, subscribe, <<"users/testuser/1">>),
+    Default = emqttd_access_control:check_acl(UnClientIdUser1, subscribe, <<"users/testuser/1">>),
+    Default = emqttd_access_control:check_acl(UnnameUser1, subscribe, <<"$SYS/testuser/1">>),
     
     
     User2 = #mqtt_client{client_id = <<"client2">>, username = <<"xyz">>, peername = {{127,0,0,1}, 2982}},
     UserC = #mqtt_client{client_id = <<"client2">>, username = <<"xyz">>, peername = {{192,168,1,3}, 2983}},
     allow = emqttd_access_control:check_acl(UserC, publish, <<"a/b/c">>),
-    deny = emqttd_access_control:check_acl(User2, publish, <<"a/b/c">>),
-    deny  = emqttd_access_control:check_acl(User2, subscribe, <<"$SYS/testuser/1">>).
+    Default = emqttd_access_control:check_acl(User2, publish, <<"a/b/c">>),
+    Default = emqttd_access_control:check_acl(User2, subscribe, <<"$SYS/testuser/1">>).
 
 check_auth(_) ->
+    {ok, Default} = application:get_env(emqttd, allow_anonymous),
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser1">>, peername = {{127,0,0,1}, 2981}},
 
     User2 = #mqtt_client{client_id = <<"client2">>, username = <<"testuser2">>, peername = {{127,0,0,1}, 2982}},
@@ -111,14 +117,14 @@ check_auth(_) ->
     User3 = #mqtt_client{client_id = <<"client3">>, peername = {{127,0,0,1}, 2983}},
 
     {ok, false} = emqttd_access_control:auth(User1, <<"pass1">>),
-    {error, {http_code, _Code}} = emqttd_access_control:auth(User1, <<"pass">>),
+    ok  = emqttd_access_control:auth(User1, <<"pass">>),
     {error, username_or_password_undefined} = emqttd_access_control:auth(User1, <<>>),
     
     {ok, false} = emqttd_access_control:auth(User2, <<"pass2">>),
     {error, username_or_password_undefined} = emqttd_access_control:auth(User2, <<>>),
-    {error, {http_code, _Code}} = emqttd_access_control:auth(User2, <<"errorpwd">>),
+    ok = emqttd_access_control:auth(User2, <<"errorpwd">>),
     
-    {error, _} = emqttd_access_control:auth(User3, <<"pwd">>).
+    {error, username_or_password_undefined} = emqttd_access_control:auth(User3, <<"pwd">>).
 
 restart_httpserver(_) ->
     mochiweb:stop_http(8080),
@@ -139,6 +145,14 @@ sub_pub(_) ->
         after 1000 -> false end,
     emqttc:disconnect(T1),
     emqttc:disconnect(T2).
+
+comment_config(_) ->
+    application:stop(?APP),
+    [application:unset_env(?APP, Par) || Par <- [acl_req, auth_req]],
+    application:start(?APP),
+    ?assertEqual([], emqttd_access_control:lookup_mods(auth)),
+    ?assertEqual([], emqttd_access_control:lookup_mods(acl)).
+
 
 
 %%%%%%%start http listen%%%%%%%%%%%%%%%%%%%%%
