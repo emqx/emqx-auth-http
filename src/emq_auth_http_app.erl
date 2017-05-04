@@ -42,9 +42,7 @@ reg_authmod(AuthReq) ->
     emqttd_access_control:register_mod(auth, emq_auth_http, {AuthReq, SuperReq}).
 
 reg_aclmod(AclReq) ->
-    {ok, AclNomatch} = application:get_env(?APP, acl_nomatch),
-    AclEnv = {AclReq, AclNomatch},
-    emqttd_access_control:register_mod(acl, emq_acl_http, AclEnv).
+    emqttd_access_control:register_mod(acl, emq_acl_http, AclReq).
 
 stop(_State) ->
     emqttd_access_control:unregister_mod(acl, emq_acl_http),

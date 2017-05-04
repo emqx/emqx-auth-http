@@ -65,8 +65,3 @@ end}.
   end
 end}.
 
-{mapping, "auth.http.acl_nomatch", "emq_auth_http.acl_nomatch", [
-  {default, deny},
-  {datatype, {enum, [deny, allow]}}
-]}.
-
