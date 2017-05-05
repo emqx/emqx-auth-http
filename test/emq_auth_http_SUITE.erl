@@ -127,9 +127,10 @@ check_auth(_) ->
     {error, username_or_password_undefined} = emqttd_access_control:auth(User3, <<"pwd">>).
 
 restart_httpserver(_) ->
+    {ok, Default} = application:get_env(emqttd, acl_nomatch),
     mochiweb:stop_http(8080),
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
-    deny = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
+    Default = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
     start_http_(),
     allow = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>).
 

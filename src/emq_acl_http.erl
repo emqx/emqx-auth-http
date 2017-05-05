@@ -37,7 +37,7 @@ check_acl({Client, PubSub, Topic}, #state{acl_req = #http_request{method = Metho
     case request(Method, Url, Params1) of
         {ok, 200, _Body}   -> allow;
         {ok, _Code, _Body} -> ignore;
-        {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), deny
+        {error, Error}     -> lager:error("Http check_acl url ~s Error: ~p", [Url, Error]), ignore
     end.
 
 access(subscribe) -> 1;
