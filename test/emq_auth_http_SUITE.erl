@@ -87,29 +87,29 @@ end_per_suite(_Config) ->
 
 check_acl(_) ->
     SuperUser = #mqtt_client{client_id = <<"superclient">>, username = <<"superuser">>, peername = {{127,0,0,1}, 2982}},
-    {ok, Default} = application:get_env(emqttd, acl_nomatch),
-    Default = emqttd_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
-    Default = emqttd_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
+%    {ok, Default} = application:get_env(emqttd, acl_nomatch),
+    deny = emqttd_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
+    deny = emqttd_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
     
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
     UnIpUser1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{192,168,0,4}, 2981}},
     UnClientIdUser1 = #mqtt_client{client_id = <<"unkonwc">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
     UnnameUser1= #mqtt_client{client_id = <<"client1">>, username = <<"unuser">>, peername = {{127,0,0,1}, 2981}},
     allow = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
-    Default  = emqttd_access_control:check_acl(User1, publish, <<"users/testuser/1">>),
-    Default = emqttd_access_control:check_acl(UnIpUser1, subscribe, <<"users/testuser/1">>),
-    Default = emqttd_access_control:check_acl(UnClientIdUser1, subscribe, <<"users/testuser/1">>),
-    Default = emqttd_access_control:check_acl(UnnameUser1, subscribe, <<"$SYS/testuser/1">>),
+    deny = emqttd_access_control:check_acl(User1, publish, <<"users/testuser/1">>),
+    deny = emqttd_access_control:check_acl(UnIpUser1, subscribe, <<"users/testuser/1">>),
+    deny = emqttd_access_control:check_acl(UnClientIdUser1, subscribe, <<"users/testuser/1">>),
+    deny = emqttd_access_control:check_acl(UnnameUser1, subscribe, <<"$SYS/testuser/1">>),
     
     
     User2 = #mqtt_client{client_id = <<"client2">>, username = <<"xyz">>, peername = {{127,0,0,1}, 2982}},
     UserC = #mqtt_client{client_id = <<"client2">>, username = <<"xyz">>, peername = {{192,168,1,3}, 2983}},
     allow = emqttd_access_control:check_acl(UserC, publish, <<"a/b/c">>),
-    Default = emqttd_access_control:check_acl(User2, publish, <<"a/b/c">>),
-    Default = emqttd_access_control:check_acl(User2, subscribe, <<"$SYS/testuser/1">>).
+    deny = emqttd_access_control:check_acl(User2, publish, <<"a/b/c">>),
+    deny = emqttd_access_control:check_acl(User2, subscribe, <<"$SYS/testuser/1">>).
 
 check_auth(_) ->
-    {ok, Default} = application:get_env(emqttd, allow_anonymous),
+%    {ok, Default} = application:get_env(emqttd, allow_anonymous),
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser1">>, peername = {{127,0,0,1}, 2981}},
 
     User2 = #mqtt_client{client_id = <<"client2">>, username = <<"testuser2">>, peername = {{127,0,0,1}, 2982}},
@@ -117,20 +117,20 @@ check_auth(_) ->
     User3 = #mqtt_client{client_id = <<"client3">>, peername = {{127,0,0,1}, 2983}},
 
     {ok, false} = emqttd_access_control:auth(User1, <<"pass1">>),
-    ok  = emqttd_access_control:auth(User1, <<"pass">>),
+    {error, 404}= emqttd_access_control:auth(User1, <<"pass">>),
     {error, username_or_password_undefined} = emqttd_access_control:auth(User1, <<>>),
     
     {ok, false} = emqttd_access_control:auth(User2, <<"pass2">>),
     {error, username_or_password_undefined} = emqttd_access_control:auth(User2, <<>>),
-    ok = emqttd_access_control:auth(User2, <<"errorpwd">>),
+    {error, 404} = emqttd_access_control:auth(User2, <<"errorpwd">>),
     
     {error, username_or_password_undefined} = emqttd_access_control:auth(User3, <<"pwd">>).
 
 restart_httpserver(_) ->
-    {ok, Default} = application:get_env(emqttd, acl_nomatch),
+%    {ok, Default} = application:get_env(emqttd, acl_nomatch),
     mochiweb:stop_http(8080),
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
-    Default = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
+    deny = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
     start_http_(),
     allow = emqttd_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>).
 
