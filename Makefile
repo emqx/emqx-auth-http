@@ -1,10 +1,10 @@
 PROJECT = emq_auth_http
 PROJECT_DESCRIPTION = Authentication/ACL with HTTP API
-PROJECT_VERSION = 2.2
+PROJECT_VERSION = 2.3
 
 BUILD_DEPS = emqttd cuttlefish
 
-dep_emqttd = git https://github.com/emqtt/emqttd emq22
+dep_emqttd = git https://github.com/emqtt/emqttd develop
 dep_cuttlefish = git https://github.com/emqtt/cuttlefish
 
 ERLC_OPTS += +debug_info
