@@ -6,7 +6,7 @@ DEPS = clique
 dep_clique  = git https://github.com/emqtt/clique
 
 BUILD_DEPS = emqttd cuttlefish
-dep_emqttd = git https://github.com/emqtt/emqttd develop
+dep_emqttd = git https://github.com/emqtt/emqttd emq24
 dep_cuttlefish = git https://github.com/emqtt/cuttlefish
 
 ERLC_OPTS += +debug_info
