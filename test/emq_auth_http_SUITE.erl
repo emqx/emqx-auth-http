@@ -70,6 +70,7 @@ groups() ->
      check_auth,
      restart_httpserver,
      sub_pub,
+     server_config,
      comment_config
     ]}].
 
@@ -146,6 +147,44 @@ sub_pub(_) ->
         after 1000 -> false end,
     emqttc:disconnect(T1),
     emqttc:disconnect(T2).
+
+server_config(_) ->
+    Auth = [{url,"http://127.0.0.1:8080/mqtt/auth1"},
+            {method,get},
+            {params,[{"clientid","%c"},
+                     {"username","%u"}
+                     ]}],
+    Acl = [{url,"http://127.0.0.1:8090/mqtt/acl"},
+                           {method,post},
+                           {params,[{"access","%A"},
+                                    {"username","%u"},
+                                    {"clientid","%c"},
+                                    {"ipaddr","%a"}
+                                    ]}],
+
+    Super = [{url,"http://127.0.0.1:8080/mqtt/superuser1"},
+             {method,get},
+             {params,[{"clientid","%c"}]}],
+    SetConfigKeys = ["auth_req=http://127.0.0.1:8080/mqtt/auth1",
+                     "auth_req.method=get",
+                     "auth_req.params=clientid=%c,username=%u",
+                     "super_req=http://127.0.0.1:8080/mqtt/superuser1",
+                     "super_req.method=get",
+                     "super_req.params=clientid=%c",
+                     "acl_req=http://127.0.0.1:8090/mqtt/acl",
+                     "acl_req.method=post",
+                     "acl_req.params=access=%A,username=%u,clientid=%c,ipaddr=%a"],
+    lists:foreach(fun set_cmd/1, SetConfigKeys),
+    {ok, Auth_} =  application:get_env(emq_auth_http, auth_req),
+    {ok, Super_} =  application:get_env(emq_auth_http, super_req),
+    {ok, Acl_} =  application:get_env(emq_auth_http, acl_req),
+
+    ?assertEqual(lists:sort(Auth), lists:sort(Auth_)),
+    ?assertEqual(lists:sort(Acl), lists:sort(Acl_)),
+    ?assertEqual(lists:sort(Super), lists:sort(Super_)).
+
+set_cmd(Key) ->
+    emqttd_cli_config:run(["config", "set", string:join(["auth.http", Key], "."), "--app=emq_auth_http"]).
 
 comment_config(_) ->
     application:stop(?APP),
