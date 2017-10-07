@@ -1,7 +1,7 @@
-emq_auth_http
+emqx_auth_http
 =============
 
-HTTP Auth/ACL Plugin for *EMQ* Broker
+EMQ X HTTP Auth/ACL Plugin
 
 Build
 -----
@@ -13,7 +13,7 @@ make && make tests
 Configure the Plugin
 --------------------
 
-File: etc/emq_auth_http.conf
+File: etc/emqx_auth_http.conf
 
 ```
 ## Variables: %u = username, %c = clientid, %a = ipaddress, %P = password, %t = topic
@@ -36,7 +36,7 @@ Load the Plugin
 ---------------
 
 ```
-./bin/emqttd_ctl plugins load emq_auth_http
+./bin/emqx_ctl plugins load emqx_auth_http
 ```
 
 HTTP API
@@ -54,5 +54,5 @@ Apache License Version 2.0
 Author
 ------
 
-feng at emqtt.io
+EMQ X-Men Team.
 

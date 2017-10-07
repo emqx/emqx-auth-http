@@ -34,16 +34,13 @@ end}.
 ]}.
 
 {translation, "emqx_auth_http.super_req", fun(Conf) ->
-  case cuttlefish:conf_get("auth.http.super_req", Conf, undefined) of
-    undefined -> cuttlefish:unset();
-    Url -> Params = cuttlefish:conf_get("auth.http.super_req.params", Conf),
-           [{url, Url}, {method, cuttlefish:conf_get("auth.http.super_req.method", Conf)},
-            {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
-  end
+  Params = cuttlefish:conf_get("auth.http.super_req.params", Conf),
+  [{url, cuttlefish:conf_get("auth.http.super_req", Conf)},
+   {method, cuttlefish:conf_get("auth.http.super_req.method", Conf)},
+   {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
 end}.
 
 {mapping, "auth.http.acl_req", "emqx_auth_http.acl_req", [
-  {default, undefined},
   {datatype, string}
 ]}.
 
@@ -57,11 +54,14 @@ end}.
 ]}.
 
 {translation, "emqx_auth_http.acl_req", fun(Conf) ->
-  case cuttlefish:conf_get("auth.http.acl_req", Conf, undefined) of
-    undefined -> cuttlefish:unset();
-    Url -> Params = cuttlefish:conf_get("auth.http.acl_req.params", Conf),
-           [{url, Url}, {method, cuttlefish:conf_get("auth.http.acl_req.method", Conf)},
-            {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
-  end
+  Params = cuttlefish:conf_get("auth.http.acl_req.params", Conf),
+  [{url, cuttlefish:conf_get("auth.http.acl_req", Conf)},
+   {method, cuttlefish:conf_get("auth.http.acl_req.method", Conf)},
+   {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
 end}.
+
+{mapping, "auth.http.acl_nomatch", "emqx_auth_http.acl_nomatch", [
+  {default, deny},
+  {datatype, {enum, [deny, allow]}}
+]}.
 

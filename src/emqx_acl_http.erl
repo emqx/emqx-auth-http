@@ -14,15 +14,15 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------
 
--module(emq_acl_http).
+-module(emqx_acl_http).
 
--behaviour(emqttd_acl_mod).
+-behaviour(emqx_acl_mod).
 
--include("emq_auth_http.hrl").
+-include("emqx_auth_http.hrl").
 
--include_lib("emqttd/include/emqttd.hrl").
+-include_lib("emqx/include/emqx.hrl").
 
--import(emq_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
+-import(emqx_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
 
 %% ACL callbacks
 -export([init/1, check_acl/2, reload_acl/1, description/0]).

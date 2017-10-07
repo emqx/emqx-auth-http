@@ -14,9 +14,9 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------
 
--module(emq_auth_http_cli).
+-module(emqx_auth_http_cli).
 
--include_lib("emqttd/include/emqttd.hrl").
+-include_lib("emqx/include/emqx.hrl").
 
 -export([request/3, feedvar/2, feedvar/3]).
 
