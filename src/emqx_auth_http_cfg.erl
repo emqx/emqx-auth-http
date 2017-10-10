@@ -14,11 +14,13 @@
 %% limitations under the License.
 %%--------------------------------------------------------------------
 
--module (emq_auth_http_cfg).
+-module(emqx_auth_http_cfg).
 
 -include("emqx_auth_http.hrl").
 
 -export ([register/0, unregister/0]).
+
+-define(APP, emqx_auth_http).
 
 %%--------------------------------------------------------------------
 %% API

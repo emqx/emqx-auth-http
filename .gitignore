@@ -9,7 +9,7 @@ rel/example_project
 .concrete/DEV_MODE
 .rebar
 .erlang.mk/
-emq_auth_http.d
+emqx_auth_http.d
 data
 ct.cover.spec
 cover/
