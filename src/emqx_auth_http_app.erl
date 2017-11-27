@@ -35,7 +35,7 @@
 start(_StartType, _StartArgs) ->
     with_env(auth_req, fun reg_authmod/1),
     with_env(acl_req,  fun reg_aclmod/1),
-    emq_auth_http_config:register(),
+    emqx_auth_http_cfg:register(),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 reg_authmod(AuthReq) ->
