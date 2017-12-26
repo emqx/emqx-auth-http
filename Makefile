@@ -1,6 +1,6 @@
 PROJECT = emqx_auth_http
 PROJECT_DESCRIPTION = EMQ X Authentication/ACL with HTTP API
-PROJECT_VERSION = 2.3.0
+PROJECT_VERSION = 2.3.2
 
 DEPS = clique
 dep_clique  = git https://github.com/emqtt/clique
