@@ -46,8 +46,8 @@ reg_aclmod(AclReq) ->
     emqx_access_control:register_mod(acl, emqx_acl_http, AclReq).
 
 stop(_State) ->
-    emqx_access_control:unregister_mod(acl, emq_acl_http),
-    emqx_access_control:unregister_mod(auth, emq_auth_http),
+    emqx_access_control:unregister_mod(acl, emqx_acl_http),
+    emqx_access_control:unregister_mod(auth, emqx_auth_http),
     emqx_auth_http_cfg:unregister().
 
 %%--------------------------------------------------------------------
