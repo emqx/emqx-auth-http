@@ -39,7 +39,6 @@ auth.http.auth_req.params = clientid=%c,username=%u,password=%P
 ##  - %u: username
 ##  - %c: clientid
 ##  - %a: ipaddress
-##  - %P: password
 ##
 ## Value: URL
 auth.http.super_req = http://127.0.0.1:8080/mqtt/superuser
@@ -56,7 +55,6 @@ auth.http.super_req.params = clientid=%c,username=%u
 ##  - %u: username
 ##  - %c: clientid
 ##  - %a: ipaddress
-##  - %P: password
 ##  - %t: topic
 ##
 ## Value: URL
