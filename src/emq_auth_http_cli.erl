@@ -26,11 +26,19 @@
 
 request(get, Url, Params) ->
     Req = {Url ++ "?" ++ mochiweb_util:urlencode(Params), []},
-    reply(httpc:request(get, Req, [{autoredirect, true}], []));
+    reply(request_(get, Req, [{autoredirect, true}], [], 0));
 
 request(post, Url, Params) ->
     Req = {Url, [], "application/x-www-form-urlencoded", mochiweb_util:urlencode(Params)},
-    reply(httpc:request(post, Req, [{autoredirect, true}], [])).
+    reply(request_(post, Req, [{autoredirect, true}], [], 0)).
+
+request_(Method, Req, HTTPOpts, Opts, Times) ->
+    %% Resend request, when TCP closed by remotely
+    case httpc:request(Method, Req, HTTPOpts, Opts) of
+        {error, socket_closed_remotely} when Times < 5 ->
+            request_(Method, Req, HTTPOpts, Opts, Times+1);
+        Other -> Other
+    end.
 
 reply({ok, {{_, Code, _}, _Headers, Body}}) ->
     {ok, Code, Body};
