@@ -35,7 +35,8 @@ request(post, Url, Params) ->
 request_(Method, Req, HTTPOpts, Opts, Times) ->
     %% Resend request, when TCP closed by remotely
     case httpc:request(Method, Req, HTTPOpts, Opts) of
-        {error, socket_closed_remotely} when Times < 5 ->
+        {error, socket_closed_remotely} when Times < 3 ->
+            timer:sleep(trunc(math:pow(10, Times))),
             request_(Method, Req, HTTPOpts, Opts, Times+1);
         Other -> Other
     end.
