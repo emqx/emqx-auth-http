@@ -1,5 +1,4 @@
-%%--------------------------------------------------------------------
-%% Copyright (c) 2016-2017 Feng Lee <feng@emqtt.io>.
+%% Copyright (c) 2018 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
-%%--------------------------------------------------------------------
 
 -module(emqx_auth_http_SUITE).
 
@@ -26,45 +24,40 @@
 
 -define(APP, emqx_auth_http).
 
--define(SUPERUSER, [[{"username", "superuser"},
-                     {"clientid", "superclient"}]]).
+-define(SUPERUSER, [[{"username", "superuser"}, {"clientid", "superclient"}]]).
 
--define(ACL, [
-              [{"username", "testuser"},
+-define(ACL, [[{"username", "testuser"},
                {"clientid", "client1"},
                {"access", "1"},
                {"topic", "users/testuser/1"},
                {"ipaddr", "127.0.0.1"}],
-             [{"username", "xyz"},
-              {"clientid", "client2"},
-              {"access", "2"},
-              {"topic", "a/b/c"},
-              {"ipaddr", "192.168.1.3"}],
-            [{"username", "testuser1"},
-              {"clientid", "client1"},
-              {"access", "2"},
-              {"topic", "topic"},
-              {"ipaddr", "127.0.0.1"}],
-            [{"username", "testuser2"},
-              {"clientid", "client2"},
-              {"access", "1"},
-              {"topic", "topic"},
-              {"ipaddr", "127.0.0.1"}]
-             ]).
+              [{"username", "xyz"},
+               {"clientid", "client2"},
+               {"access", "2"},
+               {"topic", "a/b/c"},
+               {"ipaddr", "192.168.1.3"}],
+              [{"username", "testuser1"},
+               {"clientid", "client1"},
+               {"access", "2"},
+               {"topic", "topic"},
+               {"ipaddr", "127.0.0.1"}],
+              [{"username", "testuser2"},
+               {"clientid", "client2"},
+               {"access", "1"},
+               {"topic", "topic"},
+               {"ipaddr", "127.0.0.1"}]]).
 
--define(AUTH, [
-               [{"clientid","client1"},
+-define(AUTH, [[{"clientid","client1"},
                 {"username", "testuser1"},
                 {"password", "pass1"}],
                [{"clientid","client2"},
                 {"username", "testuser2"},
-                {"password", "pass2"}]
-              ]).
+                {"password", "pass2"}]]).
 
-all() -> 
+all() ->
     [{group, emqx_auth_http}].
 
-groups() -> 
+groups() ->
     [{emqx_auth_http, [sequence],
     [check_acl,
      check_auth,
@@ -88,7 +81,7 @@ check_acl(_) ->
     SuperUser = #mqtt_client{client_id = <<"superclient">>, username = <<"superuser">>, peername = {{127,0,0,1}, 2982}},
     deny = emqx_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
-    
+
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
     UnIpUser1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{192,168,0,4}, 2981}},
     UnClientIdUser1 = #mqtt_client{client_id = <<"unkonwc">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
@@ -98,8 +91,8 @@ check_acl(_) ->
     deny = emqx_access_control:check_acl(UnIpUser1, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(UnClientIdUser1, subscribe, <<"users/testuser/1">>),
     deny  = emqx_access_control:check_acl(UnnameUser1, subscribe, <<"$SYS/testuser/1">>),
-    
-    
+
+
     User2 = #mqtt_client{client_id = <<"client2">>, username = <<"xyz">>, peername = {{127,0,0,1}, 2982}},
     UserC = #mqtt_client{client_id = <<"client2">>, username = <<"xyz">>, peername = {{192,168,1,3}, 2983}},
     allow = emqx_access_control:check_acl(UserC, publish, <<"a/b/c">>),
@@ -111,17 +104,17 @@ check_auth(_) ->
     User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser1">>, peername = {{127,0,0,1}, 2981}},
 
     User2 = #mqtt_client{client_id = <<"client2">>, username = <<"testuser2">>, peername = {{127,0,0,1}, 2982}},
-    
+
     User3 = #mqtt_client{client_id = <<"client3">>, peername = {{127,0,0,1}, 2983}},
 
     {ok, false} = emqx_access_control:auth(User1, <<"pass1">>),
     {error, 404} = emqx_access_control:auth(User1, <<"pass">>),
     {error, username_or_password_undefined} = emqx_access_control:auth(User1, <<>>),
-    
+
     {ok, false} = emqx_access_control:auth(User2, <<"pass2">>),
     {error, username_or_password_undefined} = emqx_access_control:auth(User2, <<>>),
     {error, 404} = emqx_access_control:auth(User2, <<"errorpwd">>),
-    
+
     {error, _} = emqx_access_control:auth(User3, <<"pwd">>).
 
 restart_httpserver(_) ->
@@ -133,17 +126,17 @@ restart_httpserver(_) ->
     allow = emqx_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>).
 
 sub_pub(_) ->
-    {ok, T1} = emqttc:start_link([{host, "localhost"}, {client_id, <<"client1">>}, {username, <<"testuser1">>}, {password, <<"pass1">>}]),
-    emqttc:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
+    {ok, T1} = emqx_client:start_link([{host, "localhost"}, {client_id, <<"client1">>}, {username, <<"testuser1">>}, {password, <<"pass1">>}]),
+    emqx_client:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
     timer:sleep(1000),
-    {ok, T2} = emqttc:start_link([{host, "localhost"}, {client_id, <<"client2">>}, {username, <<"testuser2">>}, {password, <<"pass2">>}]),
-    emqttc:subscribe(T2, <<"topic">>),
+    {ok, T2} = emqx_client:start_link([{host, "localhost"}, {client_id, <<"client2">>}, {username, <<"testuser2">>}, {password, <<"pass2">>}]),
+    emqx_client:subscribe(T2, <<"topic">>),
     receive
         {publish, Topic, Payload} ->
             ?assertEqual(<<"body">>, Payload)
         after 1000 -> false end,
-    emqttc:disconnect(T1),
-    emqttc:disconnect(T2).
+    emqx_client:disconnect(T1),
+    emqx_client:disconnect(T2).
 
 server_config(_) ->
     Auth = [{url,"http://127.0.0.1:8080/mqtt/auth1"},
@@ -208,10 +201,10 @@ handle_("/mqtt/superuser", Params, Req) ->
 
 handle_("/mqtt/acl", Params, Req) ->
     reply(Req, mapping_(Params, ?ACL));
- 
+
 handle_("/mqtt/auth", Params, Req) ->
     reply(Req, mapping_(Params, ?AUTH)).
-    
+
 params(Req) ->
     case Req:get(method) of
         'GET'  -> Req:parse_qs();
@@ -234,7 +227,7 @@ mapping_acl_([], _Acc) ->
 mapping_acl_([H|T], Acc) ->
     case lists:member(H, Acc) of
     true ->
-        mapping_acl_(T, Acc);   
+        mapping_acl_(T, Acc);
     false ->
        deny
     end.

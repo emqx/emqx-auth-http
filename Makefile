@@ -3,7 +3,7 @@ PROJECT_DESCRIPTION = EMQ X Authentication/ACL with HTTP API
 PROJECT_VERSION = 3.0
 
 DEPS = clique
-dep_clique  = git https://github.com/emqtt/clique
+dep_clique  = git https://github.com/emqx/clique
 
 BUILD_DEPS = emqx cuttlefish
 dep_emqx = git git@github.com:emqtt/emqttd emqx30
@@ -14,9 +14,8 @@ ERLC_OPTS += +'{parse_transform, lager_transform}'
 
 NO_AUTOPATCH = cuttlefish
 
-TEST_DEPS = emqttc emqx_retainer
-dep_emqttc = git https://github.com/emqtt/emqttc.git master
-dep_emqx_retainer  = git https://github.com/emqtt/emqx-retainer emqx30
+TEST_DEPS = emqx_retainer
+dep_emqx_retainer = git https://github.com/emqx/emqx-retainer emqx30
 
 TEST_ERLC_OPTS += +debug_info
 TEST_ERLC_OPTS += +'{parse_transform, lager_transform}'

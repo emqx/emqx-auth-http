@@ -1,5 +1,4 @@
-%%--------------------------------------------------------------------
-%% Copyright (c) 2013-2018 EMQ Enterprise, Inc. (http://emqtt.io)
+%% Copyright (c) 2018 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
-%%--------------------------------------------------------------------
 
 -module(emqx_auth_http_cli).
 
@@ -26,11 +24,20 @@
 
 request(get, Url, Params) ->
     Req = {Url ++ "?" ++ mochiweb_util:urlencode(Params), []},
-    reply(httpc:request(get, Req, [{autoredirect, true}], []));
+    reply(request_(get, Req, [{autoredirect, true}], [], 0));
 
 request(post, Url, Params) ->
     Req = {Url, [], "application/x-www-form-urlencoded", mochiweb_util:urlencode(Params)},
-    reply(httpc:request(post, Req, [{autoredirect, true}], [])).
+    reply(request_(post, Req, [{autoredirect, true}], [], 0)).
+
+request_(Method, Req, HTTPOpts, Opts, Times) ->
+    %% Resend request, when TCP closed by remotely
+    case httpc:request(Method, Req, HTTPOpts, Opts) of
+        {error, socket_closed_remotely} when Times < 3 ->
+            timer:sleep(trunc(math:pow(10, Times))),
+            request_(Method, Req, HTTPOpts, Opts, Times+1);
+        Other -> Other
+    end.
 
 reply({ok, {{_, Code, _}, _Headers, Body}}) ->
     {ok, Code, Body};
