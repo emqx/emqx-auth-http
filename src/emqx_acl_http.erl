@@ -25,12 +25,10 @@
 %% ACL callbacks
 -export([init/1, check_acl/2, reload_acl/1, description/0]).
 
--record(state, {acl_req}).
-
 init(AclReq) ->
-	{ok, #state{acl_req = AclReq}}.
+	{ok, #{acl_req => AclReq}}.
 
-check_acl({Client, PubSub, Topic}, #state{acl_req = #http_request{method = Method, url = Url, params = Params}}) ->
+check_acl({Client, PubSub, Topic}, #{acl_req := #http_request{method = Method, url = Url, params = Params}}) ->
     Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
     case request(Method, Url, Params1) of
         {ok, 200, "ignore"} -> ignore;

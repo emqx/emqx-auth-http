@@ -11,7 +11,6 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
-%%--------------------------------------------------------------------
 
 -module(emqx_auth_http).
 
@@ -29,12 +28,13 @@
 -define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
 
 init({AuthReq, SuperReq}) ->
-    {ok, {AuthReq, SuperReq}}.
+    {ok, #{auth_req => AuthReq, super_req => SuperReq}}.
 
 check(#{username := Username}, Password, _Env) when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
     {error, username_or_password_undefined};
 
-check(Credentials, Password, {#http_request{method = Method, url = Url, params = Params}, SuperReq}) ->
+check(Credentials, Password, #{auth_req := #http_request{method = Method, url = Url, params = Params},
+                               super_req := SuperReq}) ->
     Params1 = feedvar(feedvar(Params, Credentials), "%P", Password),
     case request(Method, Url, Params1) of
         {ok, 200, "ignore"} -> ignore;
