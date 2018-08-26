@@ -50,7 +50,7 @@ reply({error, Error}) ->
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, peername = {IpAddr, _}}) ->
+feedvar(Params, #{username := Username, client_id := ClientId, peername := {IpAddr, _}}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
                  ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
@@ -58,5 +58,7 @@ feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, peername
               end, Params).
 
 feedvar(Params, Var, Val) ->
-    lists:map(fun({Param, Var0}) when Var0 == Var -> {Param, Val}; (Param) -> Param end, Params).
+    lists:map(fun({Param, Var0}) when Var0 == Var ->
+                      {Param, Val};
+                 (Param) -> Param end, Params).
 

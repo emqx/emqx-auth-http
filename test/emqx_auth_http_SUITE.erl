@@ -78,58 +78,62 @@ end_per_suite(_Config) ->
     [application:stop(App) || App <- [emqx_retainer, emqx_auth_http, emqx]].
 
 check_acl(_) ->
-    SuperUser = #mqtt_client{client_id = <<"superclient">>, username = <<"superuser">>, peername = {{127,0,0,1}, 2982}},
+    SuperUser = #{client_id => <<"superclient">>, username => <<"superuser">>,
+                  peername => {{127,0,0,1}, 2982}},
     deny = emqx_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
 
-    User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
-    UnIpUser1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{192,168,0,4}, 2981}},
-    UnClientIdUser1 = #mqtt_client{client_id = <<"unkonwc">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
-    UnnameUser1= #mqtt_client{client_id = <<"client1">>, username = <<"unuser">>, peername = {{127,0,0,1}, 2981}},
+    User1 = #{client_id => <<"client1">>, username => <<"testuser">>, peername => {{127,0,0,1}, 2981}},
+    UnIpUser1 = #{client_id => <<"client1">>, username => <<"testuser">>, peername => {{192,168,0,4}, 2981}},
+    UnClientIdUser1 = #{client_id => <<"unkonwc">>, username => <<"testuser">>, peername => {{127,0,0,1}, 2981}},
+    UnnameUser1= #{client_id => <<"client1">>, username => <<"unuser">>, peername => {{127,0,0,1}, 2981}},
     allow = emqx_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(User1, publish, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(UnIpUser1, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(UnClientIdUser1, subscribe, <<"users/testuser/1">>),
     deny  = emqx_access_control:check_acl(UnnameUser1, subscribe, <<"$SYS/testuser/1">>),
 
-
-    User2 = #mqtt_client{client_id = <<"client2">>, username = <<"xyz">>, peername = {{127,0,0,1}, 2982}},
-    UserC = #mqtt_client{client_id = <<"client2">>, username = <<"xyz">>, peername = {{192,168,1,3}, 2983}},
+    User2 = #{client_id => <<"client2">>, username => <<"xyz">>, peername => {{127,0,0,1}, 2982}},
+    UserC = #{client_id => <<"client2">>, username => <<"xyz">>, peername => {{192,168,1,3}, 2983}},
     allow = emqx_access_control:check_acl(UserC, publish, <<"a/b/c">>),
     deny = emqx_access_control:check_acl(User2, publish, <<"a/b/c">>),
     deny  = emqx_access_control:check_acl(User2, subscribe, <<"$SYS/testuser/1">>).
 
 check_auth(_) ->
-%    {ok, Default} = application:get_env(emqttd, allow_anonymous),
-    User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser1">>, peername = {{127,0,0,1}, 2981}},
+%    {ok, Default} = application:get_env(emqx, allow_anonymous),
+    User1 = #{client_id => <<"client1">>, username => <<"testuser1">>, peername => {{127,0,0,1}, 2981}},
+    User2 = #{client_id => <<"client2">>, username => <<"testuser2">>, peername => {{127,0,0,1}, 2982}},
+    User3 = #{client_id => <<"client3">>, peername => {{127,0,0,1}, 2983}},
 
-    User2 = #mqtt_client{client_id = <<"client2">>, username = <<"testuser2">>, peername = {{127,0,0,1}, 2982}},
+    {ok, false} = emqx_access_control:authenticate(User1, <<"pass1">>),
+    {error, 404} = emqx_access_control:authenticate(User1, <<"pass">>),
+    {error, username_or_password_undefined} = emqx_access_control:authenticate(User1, <<>>),
 
-    User3 = #mqtt_client{client_id = <<"client3">>, peername = {{127,0,0,1}, 2983}},
+    {ok, false} = emqx_access_control:authenticate(User2, <<"pass2">>),
+    {error, username_or_password_undefined} = emqx_access_control:authenticate(User2, <<>>),
+    {error, 404} = emqx_access_control:authenticate(User2, <<"errorpwd">>),
 
-    {ok, false} = emqx_access_control:auth(User1, <<"pass1">>),
-    {error, 404} = emqx_access_control:auth(User1, <<"pass">>),
-    {error, username_or_password_undefined} = emqx_access_control:auth(User1, <<>>),
-
-    {ok, false} = emqx_access_control:auth(User2, <<"pass2">>),
-    {error, username_or_password_undefined} = emqx_access_control:auth(User2, <<>>),
-    {error, 404} = emqx_access_control:auth(User2, <<"errorpwd">>),
-
-    {error, _} = emqx_access_control:auth(User3, <<"pwd">>).
+    {error, _} = emqx_access_control:authenticate(User3, <<"pwd">>).
 
 restart_httpserver(_) ->
-%    {ok, Default} = application:get_env(emqttd, acl_nomatch),
+%    {ok, Default} = application:get_env(emqx, acl_nomatch),
     mochiweb:stop_http(8080),
-    User1 = #mqtt_client{client_id = <<"client1">>, username = <<"testuser">>, peername = {{127,0,0,1}, 2981}},
+    User1 = #{client_id => <<"client1">>, username => <<"testuser">>, peername => {{127,0,0,1}, 2981}},
     deny = emqx_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
     start_http_(),
     allow = emqx_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>).
 
 sub_pub(_) ->
-    {ok, T1} = emqx_client:start_link([{host, "localhost"}, {client_id, <<"client1">>}, {username, <<"testuser1">>}, {password, <<"pass1">>}]),
-    emqx_client:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
+    {ok, T1} = emqx_client:start_link([{host, "localhost"},
+                                       {client_id, <<"client1">>},
+                                       {username, <<"testuser1">>},
+                                       {password, <<"pass1">>}]),
+    emqx_client:publish(T1, <<"topic">>, <<"body">>, #{qos => 0, retain => true}),
     timer:sleep(1000),
-    {ok, T2} = emqx_client:start_link([{host, "localhost"}, {client_id, <<"client2">>}, {username, <<"testuser2">>}, {password, <<"pass2">>}]),
+    {ok, T2} = emqx_client:start_link([{host, "localhost"},
+                                       {client_id, <<"client2">>},
+                                       {username, <<"testuser2">>},
+                                       {password, <<"pass2">>}]),
     emqx_client:subscribe(T2, <<"topic">>),
     receive
         {publish, Topic, Payload} ->
@@ -174,16 +178,14 @@ server_config(_) ->
     ?assertEqual(lists:sort(Super), lists:sort(Super_)).
 
 set_cmd(Key) ->
-    emqttd_cli_config:run(["config", "set", string:join(["auth.http", Key], "."), "--app=emqx_auth_http"]).
+    emqx_cli_config:run(["config", "set", string:join(["auth.http", Key], "."), "--app=emqx_auth_http"]).
 
 comment_config(_) ->
     application:stop(?APP),
     [application:unset_env(?APP, Par) || Par <- [acl_req, auth_req]],
     application:start(?APP),
-    ?assertEqual([], emqttd_access_control:lookup_mods(auth)),
-    ?assertEqual([], emqttd_access_control:lookup_mods(acl)).
-
-
+    ?assertEqual([], emqx_access_control:lookup_mods(auth)),
+    ?assertEqual([], emqx_access_control:lookup_mods(acl)).
 
 %%%%%%%start http listen%%%%%%%%%%%%%%%%%%%%%
 start_http_() ->

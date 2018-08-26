@@ -31,14 +31,14 @@
 init({AuthReq, SuperReq}) ->
     {ok, {AuthReq, SuperReq}}.
 
-check(#mqtt_client{username = Username}, Password, _Env) when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
+check(#{username := Username}, Password, _Env) when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
     {error, username_or_password_undefined};
 
-check(Client, Password, {#http_request{method = Method, url = Url, params = Params}, SuperReq}) ->
-    Params1 = feedvar(feedvar(Params, Client), "%P", Password),
+check(Credentials, Password, {#http_request{method = Method, url = Url, params = Params}, SuperReq}) ->
+    Params1 = feedvar(feedvar(Params, Credentials), "%P", Password),
     case request(Method, Url, Params1) of
         {ok, 200, "ignore"} -> ignore;
-        {ok, 200, _Body}  -> {ok, is_superuser(SuperReq, Client)};
+        {ok, 200, _Body}  -> {ok, is_superuser(SuperReq, Credentials)};
         {ok, Code, _Body} -> {error, Code};
         {error, Error}    -> lager:error("HTTP ~s Error: ~p", [Url, Error]),
                              {error, Error}
@@ -50,13 +50,14 @@ description() -> "Authentication by HTTP API".
 %% Is Superuser?
 %%--------------------------------------------------------------------
 
--spec(is_superuser(undefined | #http_request{}, mqtt_client()) -> boolean()).
-is_superuser(undefined, _MqttClient) ->
+-spec(is_superuser(undefined | #http_request{}, emqx_types:credetials()) -> boolean()).
+is_superuser(undefined, _Credetials) ->
     false;
-is_superuser(#http_request{method = Method, url = Url, params = Params}, MqttClient) ->
-    case request(Method, Url, feedvar(Params, MqttClient)) of
+is_superuser(#http_request{method = Method, url = Url, params = Params}, Credetials) ->
+    case request(Method, Url, feedvar(Params, Credetials)) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
-        {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]), false
+        {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]),
+                              false
     end.
 
