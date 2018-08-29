@@ -24,36 +24,6 @@
 
 -define(APP, emqx_auth_http).
 
--define(SUPERUSER, [[{"username", "superuser"}, {"clientid", "superclient"}]]).
-
--define(ACL, [[{"username", "testuser"},
-               {"clientid", "client1"},
-               {"access", "1"},
-               {"topic", "users/testuser/1"},
-               {"ipaddr", "127.0.0.1"}],
-              [{"username", "xyz"},
-               {"clientid", "client2"},
-               {"access", "2"},
-               {"topic", "a/b/c"},
-               {"ipaddr", "192.168.1.3"}],
-              [{"username", "testuser1"},
-               {"clientid", "client1"},
-               {"access", "2"},
-               {"topic", "topic"},
-               {"ipaddr", "127.0.0.1"}],
-              [{"username", "testuser2"},
-               {"clientid", "client2"},
-               {"access", "1"},
-               {"topic", "topic"},
-               {"ipaddr", "127.0.0.1"}]]).
-
--define(AUTH, [[{"clientid","client1"},
-                {"username", "testuser1"},
-                {"password", "pass1"}],
-               [{"clientid","client2"},
-                {"username", "testuser2"},
-                {"password", "pass2"}]]).
-
 all() ->
     [{group, emqx_auth_http}].
 
@@ -61,23 +31,30 @@ groups() ->
     [{emqx_auth_http, [sequence],
     [check_acl,
      check_auth,
-     restart_httpserver,
      sub_pub,
-     server_config,
+     %server_config,
      comment_config
     ]}].
 
 init_per_suite(Config) ->
     DataDir = proplists:get_value(data_dir, Config),
+    http_auth_server:start_http(),
     [start_apps(App, DataDir) || App <- [emqx, emqx_auth_http, emqx_retainer]],
-    start_http_(),
     Config.
 
 end_per_suite(_Config) ->
-    mochiweb:stop_http(8080),
+    http_auth_server:stop_http(),
     [application:stop(App) || App <- [emqx_retainer, emqx_auth_http, emqx]].
 
+init_per_testcase(_) ->
+    ok.
+
+end_per_testcase(_) ->
+    ok.
+
 check_acl(_) ->
+    %ct:pal("all configs: ~p ", [application:get_all_env(?APP)]),
+    %ct:pal("emqx all configs: ~p ", [application:get_all_env(emqx)]),
     SuperUser = #{client_id => <<"superclient">>, username => <<"superuser">>,
                   peername => {{127,0,0,1}, 2982}},
     deny = emqx_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
@@ -105,45 +82,38 @@ check_auth(_) ->
     User2 = #{client_id => <<"client2">>, username => <<"testuser2">>, peername => {{127,0,0,1}, 2982}},
     User3 = #{client_id => <<"client3">>, peername => {{127,0,0,1}, 2983}},
 
-    {ok, false} = emqx_access_control:authenticate(User1, <<"pass1">>),
+    {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User1, <<"pass1">>),
     {error, 404} = emqx_access_control:authenticate(User1, <<"pass">>),
     {error, username_or_password_undefined} = emqx_access_control:authenticate(User1, <<>>),
 
-    {ok, false} = emqx_access_control:authenticate(User2, <<"pass2">>),
+    {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User2, <<"pass2">>),
     {error, username_or_password_undefined} = emqx_access_control:authenticate(User2, <<>>),
     {error, 404} = emqx_access_control:authenticate(User2, <<"errorpwd">>),
 
     {error, _} = emqx_access_control:authenticate(User3, <<"pwd">>).
 
-restart_httpserver(_) ->
-%    {ok, Default} = application:get_env(emqx, acl_nomatch),
-    mochiweb:stop_http(8080),
-    User1 = #{client_id => <<"client1">>, username => <<"testuser">>, peername => {{127,0,0,1}, 2981}},
-    deny = emqx_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
-    start_http_(),
-    allow = emqx_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>).
-
 sub_pub(_) ->
-    {ok, T1} = emqx_client:start_link([{host, "localhost"},
-                                       {client_id, <<"client1">>},
-                                       {username, <<"testuser1">>},
-                                       {password, <<"pass1">>}]),
-    emqx_client:publish(T1, <<"topic">>, <<"body">>, #{qos => 0, retain => true}),
+    ct:pal("start client"),
+    {ok, T1, _} = emqx_client:start_link([{host, "localhost"},
+                                          {client_id, <<"client1">>},
+                                          {username, <<"testuser1">>},
+                                          {password, <<"pass1">>}]),
+    emqx_client:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
     timer:sleep(1000),
-    {ok, T2} = emqx_client:start_link([{host, "localhost"},
-                                       {client_id, <<"client2">>},
-                                       {username, <<"testuser2">>},
-                                       {password, <<"pass2">>}]),
+    {ok, T2, _} = emqx_client:start_link([{host, "localhost"},
+                                          {client_id, <<"client2">>},
+                                          {username, <<"testuser2">>},
+                                          {password, <<"pass2">>}]),
     emqx_client:subscribe(T2, <<"topic">>),
     receive
-        {publish, Topic, Payload} ->
+        {publish, _Topic, Payload} ->
             ?assertEqual(<<"body">>, Payload)
         after 1000 -> false end,
     emqx_client:disconnect(T1),
     emqx_client:disconnect(T2).
 
 server_config(_) ->
-    Auth = [{url,"http://127.0.0.1:8080/mqtt/auth1"},
+    Auth = [{url,"http://127.0.0.1:8991/mqtt/auth1"},
             {method,get},
             {params,[{"clientid","%c"},
                      {"username","%u"}
@@ -156,13 +126,13 @@ server_config(_) ->
                                     {"ipaddr","%a"}
                                     ]}],
 
-    Super = [{url,"http://127.0.0.1:8080/mqtt/superuser1"},
+    Super = [{url,"http://127.0.0.1:8991/mqtt/superuser1"},
              {method,get},
              {params,[{"clientid","%c"}]}],
-    SetConfigKeys = ["auth_req=http://127.0.0.1:8080/mqtt/auth1",
+    SetConfigKeys = ["auth_req=http://127.0.0.1:8991/mqtt/auth1",
                      "auth_req.method=get",
                      "auth_req.params=clientid=%c,username=%u",
-                     "super_req=http://127.0.0.1:8080/mqtt/superuser1",
+                     "super_req=http://127.0.0.1:8991/mqtt/superuser1",
                      "super_req.method=get",
                      "super_req.params=clientid=%c",
                      "acl_req=http://127.0.0.1:8090/mqtt/acl",
@@ -187,61 +157,6 @@ comment_config(_) ->
     ?assertEqual([], emqx_access_control:lookup_mods(auth)),
     ?assertEqual([], emqx_access_control:lookup_mods(acl)).
 
-%%%%%%%start http listen%%%%%%%%%%%%%%%%%%%%%
-start_http_() ->
-    mochiweb:start_http(8080, [{max_clients, 1024}, {acceptors, 1024}],
-                        {?MODULE, handle, []}).
-
-handle(Req) ->
-    Path = Req:get(path),
-    Params = params(Req),
-    ct:log("Path:~p, Params:~p", [Path, Params]),
-    handle_(Path, Params, Req).
-
-handle_("/mqtt/superuser", Params, Req) ->
-    reply(Req, mapping_(Params, ?SUPERUSER));
-
-handle_("/mqtt/acl", Params, Req) ->
-    reply(Req, mapping_(Params, ?ACL));
-
-handle_("/mqtt/auth", Params, Req) ->
-    reply(Req, mapping_(Params, ?AUTH)).
-
-params(Req) ->
-    case Req:get(method) of
-        'GET'  -> Req:parse_qs();
-        'POST' -> Req:parse_post()
-    end.
-
-mapping_(_Params, []) ->
-    deny;
-mapping_(Params, [H|T]) ->
-    case mapping_acl_(Params, H) of
-        deny ->
-            mapping_(Params, T);
-        _ ->
-            allow
-     end.
-
-mapping_acl_([], _Acc) ->
-    allow;
-
-mapping_acl_([H|T], Acc) ->
-    case lists:member(H, Acc) of
-    true ->
-        mapping_acl_(T, Acc);
-    false ->
-       deny
-    end.
-
-reply(Req, Result) ->
-    case Result of
-    allow ->
-        Req:respond({200, [{"Content-Type", "text/plain"}], []});
-    deny ->
-        Req:respond({404, [{"Content-Type", "text/plain"}], []})
-    end.
-
 start_apps(App, DataDir) ->
     Schema = cuttlefish_schema:files([filename:join([DataDir, atom_to_list(App) ++ ".schema"])]),
     Conf = conf_parse:file(filename:join([DataDir, atom_to_list(App) ++ ".conf"])),
@@ -249,4 +164,3 @@ start_apps(App, DataDir) ->
     Vals = proplists:get_value(App, NewConfig),
     [application:set_env(App, Par, Value) || {Par, Value} <- Vals],
     application:ensure_all_started(App).
-

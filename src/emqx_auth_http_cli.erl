@@ -23,11 +23,11 @@
 %%--------------------------------------------------------------------
 
 request(get, Url, Params) ->
-    Req = {Url ++ "?" ++ mochiweb_util:urlencode(Params), []},
+    Req = {Url ++ "?" ++ cow_qs:qs(bin_kw(Params)), []},
     reply(request_(get, Req, [{autoredirect, true}], [], 0));
 
 request(post, Url, Params) ->
-    Req = {Url, [], "application/x-www-form-urlencoded", mochiweb_util:urlencode(Params)},
+    Req = {Url, [], "application/x-www-form-urlencoded", cow_qs:qs(bin_kw(Params))},
     reply(request_(post, Req, [{autoredirect, true}], [], 0)).
 
 request_(Method, Req, HTTPOpts, Opts, Times) ->
@@ -46,19 +46,35 @@ reply({ok, Code, Body}) ->
 reply({error, Error}) ->
     {error, Error}.
 
+%% TODO: move this conversion to cuttlefish config and schema
+bin_kw(KeywordList) when is_list(KeywordList) ->
+    [{bin(K), bin(V)} || {K, V} <- KeywordList].
+
+bin(Atom) when is_atom(Atom) ->
+    list_to_binary(atom_to_list(Atom));
+bin(Int) when is_integer(Int) ->
+    integer_to_binary(Int);
+bin(Float) when is_float(Float) ->
+    float_to_binary(Float, [{decimals, 12}, compact]);
+bin(List) when is_list(List)->
+    list_to_binary(List);
+bin(Binary) when is_binary(Binary) ->
+    Binary.
+
 %%--------------------------------------------------------------------
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, #{username := Username, client_id := ClientId, peername := {IpAddr, _}}) ->
+feedvar(Params, _Credentials = #{username := Username, client_id := ClientId, peername := {IpAddr, _}}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
                  ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
-                 (Param)         -> Param
+                 ({Param, Var})  -> {Param, Var}
               end, Params).
 
 feedvar(Params, Var, Val) ->
     lists:map(fun({Param, Var0}) when Var0 == Var ->
                       {Param, Val};
-                 (Param) -> Param end, Params).
-
+                 ({Param, Var0}) ->
+                      {Param, Var0}
+              end, Params).
