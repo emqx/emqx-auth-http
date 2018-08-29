@@ -84,10 +84,10 @@ reply(Req, deny) ->
     cowboy_req:reply(404, #{<<"content-type">> => <<"text/plain">>}, <<"deny">>, Req).
 
 check(_Params, []) ->
-    ct:pal("check result: deny~n"),
+    %ct:pal("check result: deny~n"),
     deny;
 check(Params, [ConfRecord|T]) ->
-    ct:pal("Params: ~p, ConfRecord:~p ~n", [Params, ConfRecord]),
+    %ct:pal("Params: ~p, ConfRecord:~p ~n", [Params, ConfRecord]),
     case match_config(Params, ConfRecord) of
         not_match ->
             check(Params, T);
