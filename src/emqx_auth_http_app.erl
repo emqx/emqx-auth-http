@@ -72,5 +72,7 @@ r(Config) ->
     Method = proplists:get_value(method, Config, post),
     Url    = proplists:get_value(url, Config),
     Params = proplists:get_value(params, Config),
-    #http_request{method = Method, url = Url, params = Params}.
+    Headers = proplists:get_value(headers, Config),
+    BodyType = proplists:get_value(body_type, Config),
+    #http_request{method = Method, url = Url, params = Params, headers = Headers, body_type =  BodyType}.
 

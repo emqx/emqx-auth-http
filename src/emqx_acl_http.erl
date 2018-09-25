@@ -22,7 +22,7 @@
 
 -include_lib("emqx/include/emqx.hrl").
 
--import(emqx_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
+-import(emqx_auth_http_cli, [request/5, feedvar/2, feedvar/3]).
 
 %% ACL callbacks
 -export([init/1, check_acl/2, reload_acl/1, description/0]).
@@ -31,10 +31,10 @@
 
 init(AclReq) ->
 	{ok, #state{acl_req = AclReq}}.
- 
-check_acl({Client, PubSub, Topic}, #state{acl_req = #http_request{method = Method, url = Url, params = Params}}) ->
-    Params1 = feedvar(feedvar(feedvar(Params, Client), "%A", access(PubSub)), "%t", Topic),
-    case request(Method, Url, Params1) of
+
+check_acl({Client, PubSub, Topic}, #state{acl_req = #http_request{method = Method, url = Url, params = Params, headers = Headers, body_type = BodyType}}) ->
+    Params1 = feedvar(feedvar(feedvar(Params, Client), <<"%A">>, access(PubSub)), <<"%t">>, Topic),
+    case request(Method, Url, Params1, Headers, #{body_type => BodyType}) of
         {ok, 200, _Body}   -> allow;
         {ok, _Code, _Body} -> deny;
         {error, Error}     -> lager:error("Http check_acl url ~s Error: ~p", [Url, Error]), deny
@@ -46,4 +46,3 @@ access(publish)   -> 2.
 reload_acl(_State) -> ok.
 
 description() -> "ACL with HTTP API".
-

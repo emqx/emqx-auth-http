@@ -18,19 +18,29 @@
 
 -include_lib("emqx/include/emqx.hrl").
 
--export([request/3, feedvar/2, feedvar/3]).
+-export([request/5, feedvar/2, feedvar/3]).
 
 %%--------------------------------------------------------------------
 %% HTTP Request
 %%--------------------------------------------------------------------
 
-request(get, Url, Params) ->
-    Req = {Url ++ "?" ++ mochiweb_util:urlencode(Params), []},
-    reply(httpc:request(get, Req, [{autoredirect, true}], []));
+request(Method, Url, Params, Headers, _Opts = #{body_type := 'query'}) ->
+    reply(httpc:request(Method, query_string(Url, Params, Headers), [{autoredirect, true}], []));
+request(Method, Url, Params, Headers, _Opts = #{body_type := urlencoded}) ->
+    reply(httpc:request(Method, url_encoded(Url, Params, Headers), [{autoredirect, true}], []));
+request(Method, Url, Body, Headers, _Opts = #{body_type := json}) ->
+    reply(httpc:request(Method, json_encoded(Url, Body, Headers), [{autoredirect, true}], []));
+request(Method, Url, Body, Headers, _Opts = #{body_type := ril}) ->
+    reply(httpc:request(Method, ril_encoded(Url, Body, Headers), [{autoredirect, true}], [])).
 
-request(post, Url, Params) ->
-    Req = {Url, [], "application/x-www-form-urlencoded", mochiweb_util:urlencode(Params)},
-    reply(httpc:request(post, Req, [{autoredirect, true}], [])).
+query_string(Url, Params, Headers) ->
+    {Url ++ "?" ++ mochiweb_util:urlencode(Params), Headers}.
+url_encoded(Url, Params, Headers) ->
+    {Url, Headers, "application/x-www-form-urlencoded", mochiweb_util:urlencode(Params)}.
+json_encoded(Url, BodyParams, Headers) ->
+    {Url, Headers, "application/json", jsx:encode(BodyParams)}.
+ril_encoded(Url, Body, Headers) ->
+    {Url, Headers, "application/json", Body}.
 
 reply({ok, {{_, Code, _}, _Headers, Body}}) ->
     {ok, Code, Body};
@@ -44,12 +54,11 @@ reply({error, Error}) ->
 %%--------------------------------------------------------------------
 
 feedvar(Params, #mqtt_client{username = Username, client_id = ClientId, peername = {IpAddr, _}}) ->
-    lists:map(fun({Param, "%u"}) -> {Param, Username};
-                 ({Param, "%c"}) -> {Param, ClientId};
-                 ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
+    lists:map(fun({Param, <<"%u">>}) -> {Param, Username};
+                 ({Param, <<"%c">>}) -> {Param, ClientId};
+                 ({Param, <<"%a">>}) -> {Param, inet:ntoa(IpAddr)};
                  (Param)         -> Param
               end, Params).
 
 feedvar(Params, Var, Val) ->
     lists:map(fun({Param, Var0}) when Var0 == Var -> {Param, Val}; (Param) -> Param end, Params).
-

@@ -1,0 +1,124 @@
+%%-*- mode: erlang -*-
+%% emqx_auth_http config mapping
+{mapping, "auth.http.auth_req", "emqx_auth_http.auth_req", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.auth_req.method", "emqx_auth_http.auth_req", [
+  {default, post},
+  {datatype, {enum, [post, get]}}
+]}.
+
+{mapping, "auth.http.auth_req.params", "emqx_auth_http.auth_req", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.auth_req.header.$key", "emqx_auth_http.auth_req", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.auth_req.body_type", "emqx_auth_http.auth_req", [
+  {datatype, atom},
+  {default, urlencoded}
+]}.
+
+{translation, "emqx_auth_http.auth_req", fun(Conf) ->
+  Params = cuttlefish:conf_get("auth.http.auth_req.params", Conf),
+  Headers = lists:map(fun({[_,_,_,_,Key], Value}) ->
+                {Key, Value}
+              end, cuttlefish_variable:filter_by_prefix("auth.http.auth_req.header", Conf)),
+
+  [{url, cuttlefish:conf_get("auth.http.auth_req", Conf)},
+   {method, cuttlefish:conf_get("auth.http.auth_req.method", Conf)},
+   {params, [begin
+                [K, V] = string:tokens(Str, "="),
+                list_to_tuple([list_to_binary(S) || S <- string:tokens(Str, "=")])
+             end || Str <- string:tokens(Params, ",")]},
+   {body_type, cuttlefish:conf_get("auth.http.auth_req.body_type", Conf)},
+   {headers, Headers}
+  ]
+end}.
+
+{mapping, "auth.http.super_req", "emqx_auth_http.super_req", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.super_req.method", "emqx_auth_http.super_req", [
+  {default, post},
+  {datatype, {enum, [post, get]}}
+]}.
+
+{mapping, "auth.http.super_req.params", "emqx_auth_http.super_req", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.super_req.header.$key", "emqx_auth_http.super_req", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.super_req.body_type", "emqx_auth_http.super_req", [
+  {datatype, atom},
+  {default, urlencoded}
+]}.
+
+{translation, "emqx_auth_http.super_req", fun(Conf) ->
+  Headers = lists:map(fun({[_,_,_,_,Key], Value}) ->
+              {Key, Value}
+            end, cuttlefish_variable:filter_by_prefix("auth.http.super_req.header", Conf)),
+
+  case cuttlefish:conf_get("auth.http.super_req", Conf, undefined) of
+    undefined -> cuttlefish:unset();
+    Url -> Params = cuttlefish:conf_get("auth.http.super_req.params", Conf),
+           [{url, Url}, {method, cuttlefish:conf_get("auth.http.super_req.method", Conf)},
+            {params, [begin
+                          [K, V] = string:tokens(Str, "="),
+                          list_to_tuple([list_to_binary(S) || S <- string:tokens(Str, "=")])
+                      end || Str <- string:tokens(Params, ",")]},
+            {body_type, cuttlefish:conf_get("auth.http.super_req.body_type", Conf)},
+            {headers, Headers}
+           ]
+  end
+end}.
+
+{mapping, "auth.http.acl_req", "emqx_auth_http.acl_req", [
+  {default, undefined},
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.acl_req.method", "emqx_auth_http.acl_req", [
+  {default, post},
+  {datatype, {enum, [post, get]}}
+]}.
+
+{mapping, "auth.http.acl_req.params", "emqx_auth_http.acl_req", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.acl_req.header.$key", "emqx_auth_http.acl_req", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.acl_req.body_type", "emqx_auth_http.acl_req", [
+  {datatype, atom},
+  {default, urlencoded}
+]}.
+
+{translation, "emqx_auth_http.acl_req", fun(Conf) ->
+  Headers = lists:map(fun({[_,_,_,_,Key], Value}) ->
+              {Key, Value}
+            end, cuttlefish_variable:filter_by_prefix("auth.http.acl_req.header", Conf)),
+
+  case cuttlefish:conf_get("auth.http.acl_req", Conf, undefined) of
+    undefined -> cuttlefish:unset();
+    Url -> Params = cuttlefish:conf_get("auth.http.acl_req.params", Conf),
+           [{url, Url}, {method, cuttlefish:conf_get("auth.http.acl_req.method", Conf)},
+            {params, [begin
+                          [K, V] = string:tokens(Str, "="),
+                          list_to_tuple([list_to_binary(S) || S <- string:tokens(Str, "=")])
+                      end || Str <- string:tokens(Params, ",")]},
+            {body_type, cuttlefish:conf_get("auth.http.acl_req.body_type", Conf)},
+            {headers, Headers}
+            ]
+  end
+end}.
+
