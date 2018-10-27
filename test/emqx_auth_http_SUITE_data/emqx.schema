@@ -382,171 +382,90 @@ end}.
 %% Log
 %%--------------------------------------------------------------------
 
-{mapping, "log.dir", "lager.log_dir", [
+{mapping, "log.to", "kernel.logger", [
+  {default, console},
+  {datatype, {enum, [off, file, console, both]}}
+]}.
+
+{mapping, "log.level", "kernel.logger_level", [
+  {default, error},
+  {datatype, {enum, [debug, info, notice, warning, error, critical, alert, emergency, all]}}
+]}.
+
+{mapping, "log.dir", "kernel.logger", [
   {default, "log"},
   {datatype, string}
 ]}.
 
-{mapping, "log.console", "lager.handlers", [
-  {default, file},
-  {datatype, {enum, [off, file, console, both]}}
-]}.
-
-{mapping, "log.console.level", "lager.handlers", [
-  {default, info},
-  {datatype, {enum, [debug, info, notice, warning, error, critical, alert, emergency, none]}}
-]}.
-
-{mapping, "log.console.file", "lager.handlers", [
-  {default, "log/console.log"},
+{mapping, "log.file", "kernel.logger", [
+  {default, "emqx.log"},
   {datatype, file}
 ]}.
 
-{mapping, "log.console.size", "lager.handlers", [
-  {default, 10485760},
-  {datatype, integer}
+{mapping, "log.rotation.size", "kernel.logger", [
+  {default, "10MB"},
+  {datatype, bytesize}
 ]}.
 
-{mapping, "log.console.count", "lager.handlers", [
+{mapping, "log.rotation.count", "kernel.logger", [
   {default, 5},
   {datatype, integer}
 ]}.
 
-{mapping, "log.info.file", "lager.handlers", [
+{mapping, "log.$level.file", "kernel.logger", [
   {datatype, file}
 ]}.
 
-{mapping, "log.info.size", "lager.handlers", [
-  {default, 10485760},
-  {datatype, integer}
-]}.
+{translation, "kernel.logger", fun(Conf) ->
+    LogTo = cuttlefish:conf_get("log.to", Conf),
+    Formatter = {emqx_logger_formatter, #{template => [time," ",pid," [",level,"] ",msg,"\n"]}},
+    FileConf =  fun(Filename) ->
+                  #{type => wrap,
+                    file => filename:join(cuttlefish:conf_get("log.dir", Conf), Filename),
+                    max_no_files => cuttlefish:conf_get("log.rotation.count", Conf),
+                    max_no_bytes => cuttlefish:conf_get("log.rotation.size", Conf)}
+                end,
 
-{mapping, "log.info.count", "lager.handlers", [
-  {default, 5},
-  {datatype, integer}
-]}.
+    %% For the default logger that outputs to console
+    DefaultHandler =
+        if LogTo =:= console orelse LogTo =:= both ->
+                [{handler, default, logger_std_h,
+                    #{level => all,
+                      config => #{type => standard_io},
+                      formatter => Formatter}}];
+           true ->
+                [{handler, default, undefined}]
+        end,
 
-{mapping, "log.error.file", "lager.handlers", [
-  {default, "log/error.log"},
-  {datatype, file}
-]}.
+    %% For the file logger
+    FileHandler =
+        if LogTo =:= file orelse LogTo =:= both ->
+              [{handler, file, logger_disk_log_h,
+                    #{level => all,
+                      config => FileConf(cuttlefish:conf_get("log.file", Conf)),
+                      formatter => Formatter,
+                      filesync_repeat_interval => 1000}}];
+           true -> []
+        end,
 
-{mapping, "log.error.size", "lager.handlers", [
-  {default, 10485760},
-  {datatype, integer}
-]}.
+    %% For creating additional log files for specific log levels.
+    AdditionalLogFiles =
+        if LogTo =:= file orelse LogTo =:= both ->
+              lists:filter(fun({K, V}) ->
+                  cuttlefish_variable:is_fuzzy_match(K, string:tokens("log.$level.file", "."))
+                end, Conf);
+           true -> []
+        end,
+    AdditionalHandlers =
+        [{handler, list_to_atom("file_for_"++Level), logger_disk_log_h,
+            #{level => list_to_atom(Level),
+              config => FileConf(Filename),
+              formatter => Formatter,
+              filesync_repeat_interval => 1000}}
+          || {[_, Level, _], Filename} <- AdditionalLogFiles],
 
-{mapping, "log.error.count", "lager.handlers", [
-  {default, 5},
-  {datatype, integer}
-]}.
-
-{mapping, "log.syslog", "lager.handlers", [
-  {default,  off},
-  {datatype, flag}
-]}.
-
-{mapping, "log.syslog.identity", "lager.handlers", [
-  {default, "emqx"},
-  {datatype, string}
-]}.
-
-{mapping, "log.syslog.facility", "lager.handlers", [
-  {default, local0},
-  {datatype, {enum, [daemon, local0, local1, local2, local3, local4, local5, local6, local7]}}
-]}.
-
-{mapping, "log.syslog.level", "lager.handlers", [
-  {default, error},
-  {datatype, {enum, [debug, info, notice, warning, error, critical, alert, emergency]}}
-]}.
-
-{mapping, "log.error.redirect", "lager.error_logger_redirect", [
-  {default, on},
-  {datatype, flag},
-  hidden
-]}.
-
-{mapping, "log.error.messages_per_second", "lager.error_logger_hwm", [
-  {default, 1000},
-  {datatype, integer},
-  hidden
-]}.
-
-{translation,
- "lager.handlers",
- fun(Conf) ->
-    ErrorHandler = case cuttlefish:conf_get("log.error.file", Conf, undefined) of
-      undefined -> [];
-      ErrorFilename -> [{lager_file_backend, [{file, ErrorFilename},
-                                              {level, error},
-                                              {size, cuttlefish:conf_get("log.error.size", Conf)},
-                                              {date, "$D0"},
-                                              {count, cuttlefish:conf_get("log.error.count", Conf)}]}]
-    end,
-
-    InfoHandler = case cuttlefish:conf_get("log.info.file", Conf, undefined) of
-      undefined -> [];
-      InfoFilename -> [{lager_file_backend, [{file, InfoFilename},
-                                             {level, info},
-                                             {size, cuttlefish:conf_get("log.info.size", Conf)},
-                                             {date, "$D0"},
-                                             {count, cuttlefish:conf_get("log.info.count", Conf)}]}]
-    end,
-
-    ConsoleLogLevel = cuttlefish:conf_get("log.console.level", Conf),
-    ConsoleLogFile = cuttlefish:conf_get("log.console.file", Conf),
-
-    ConsoleHandler = {lager_console_backend, [{level, ConsoleLogLevel}]},
-    ConsoleFileHandler = {lager_file_backend, [{file, ConsoleLogFile},
-                                               {level, ConsoleLogLevel},
-                                               {size, cuttlefish:conf_get("log.console.size", Conf)},
-                                               {date, "$D0"},
-                                               {count, cuttlefish:conf_get("log.console.count", Conf)}]},
-
-    ConsoleHandlers = case cuttlefish:conf_get("log.console", Conf) of
-      off -> [];
-      file -> [ConsoleFileHandler];
-      console -> [ConsoleHandler];
-      both -> [ConsoleHandler, ConsoleFileHandler];
-      _ -> []
-    end,
-    SyslogHandler = case cuttlefish:conf_get("log.syslog", Conf) of
-      false -> [];
-      true  -> [{lager_syslog_backend,
-                  [cuttlefish:conf_get("log.syslog.identity", Conf),
-                   cuttlefish:conf_get("log.syslog.facility", Conf),
-                   cuttlefish:conf_get("log.syslog.level", Conf)]}]
-    end,
-    ConsoleHandlers ++ ErrorHandler ++ InfoHandler ++ SyslogHandler
-  end
-}.
-
-{mapping, "log.crash", "lager.crash_log", [
-  {default, on},
-  {datatype, flag}
-]}.
-
-{mapping, "log.crash.file", "lager.crash_log", [
-  {default, "log/crash.log"},
-  {datatype, file}
-]}.
-
-{translation,
- "lager.crash_log",
- fun(Conf) ->
-     case cuttlefish:conf_get("log.crash", Conf) of
-         false -> undefined;
-         _ ->
-             cuttlefish:conf_get("log.crash.file", Conf, "./log/crash.log")
-     end
- end}.
-
-{mapping, "sasl", "sasl.sasl_error_logger", [
-  {default, off},
-  {datatype, flag},
-  hidden
-]}.
+    _AllHandlers = DefaultHandler ++ FileHandler ++ AdditionalHandlers
+end}.
 
 %%--------------------------------------------------------------------
 %% Authentication/ACL
@@ -646,6 +565,18 @@ end}.
   {datatype, {enum, [true, false]}}
 ]}.
 
+%% @doc Type: simple | priority
+{mapping, "mqtt.mqueue_type", "emqx.mqueue_type", [
+  {default, simple},
+  {datatype, {enum, [simple, priority]}}
+]}.
+
+%% @doc Topic Priorities: 0~255, Default is 0
+{mapping, "mqtt.mqueue_priorities", "emqx.mqueue_priorities", [
+  {default, ""},
+  {datatype, string}
+]}.
+
 %%--------------------------------------------------------------------
 %% Zones
 %%--------------------------------------------------------------------
@@ -670,6 +601,12 @@ end}.
   {datatype, flag}
 ]}.
 
+%% @doc Enable Ban.
+{mapping, "zone.$name.enable_ban", "emqx.zones", [
+  {default, off},
+  {datatype, flag}
+]}.
+
 %% @doc Enable per connection statistics.
 {mapping, "zone.$name.enable_stats", "emqx.zones", [
   {default, off},
@@ -678,7 +615,6 @@ end}.
 
 %% @doc Publish limit of the MQTT connections.
 {mapping, "zone.$name.publish_limit", "emqx.zones", [
-  {default, undefined},
   {datatype, string}
 ]}.
 
@@ -723,6 +659,11 @@ end}.
   {datatype, {enum, [true, false]}}
 ]}.
 
+%% @doc Server Keepalive
+{mapping, "zone.$name.server_keepalive", "emqx.zones", [
+  {datatype, integer}
+]}.
+
 %% @doc Keepalive backoff
 {mapping, "zone.$name.keepalive_backoff", "emqx.zones", [
   {default, 0.75},
@@ -762,20 +703,25 @@ end}.
 
 %% @doc Awaiting PUBREL timeout
 {mapping, "zone.$name.await_rel_timeout", "emqx.zones", [
-  {default, "60s"},
+  {default, "300s"},
   {datatype, {duration, ms}}
 ]}.
 
 %% @doc Ignore loop delivery of messages
 {mapping, "zone.$name.ignore_loop_deliver", "emqx.zones", [
-  {default, false},
   {datatype, {enum, [true, false]}}
 ]}.
 
 %% @doc Session Expiry Interval
 {mapping, "zone.$name.session_expiry_interval", "emqx.zones", [
   {default, "2h"},
-  {datatype, {duration, ms}}
+  {datatype, {duration, s}}
+]}.
+
+%% @doc Type: simple | priority
+{mapping, "zone.$name.mqueue_type", "emqx.zones", [
+  {default, simple},
+  {datatype, {enum, [simple, priority]}}
 ]}.
 
 %% @doc Max queue length. Enqueued messages when persistent client
@@ -785,10 +731,37 @@ end}.
   {datatype, integer}
 ]}.
 
+%% @doc Topic Priorities: 0~255, Default is 0
+{mapping, "zone.$name.mqueue_priorities", "emqx.zones", [
+  {datatype, string}
+]}.
+
 %% @doc Queue Qos0 messages?
 {mapping, "zone.$name.mqueue_store_qos0", "emqx.zones", [
   {default, true},
   {datatype, {enum, [true, false]}}
+]}.
+
+%% @doc Force connection/session process GC after this number of
+%% messages | bytes passed through.
+%% Numbers delimited by `|'. Zero or negative is to disable.
+{mapping, "zone.$name.force_gc_policy", "emqx.zones", [
+   {default, "0 | 0MB"},
+   {datatype, string}
+ ]}.
+
+%% @doc Max message queue length and total heap size to force shutdown
+%% connection/session process.
+%% Message queue here is the Erlang process mailbox, but not the number
+%% of queued MQTT messages of QoS 1 and 2.
+%% Zero or negative is to disable.
+{mapping, "zone.$name.force_shutdown_policy", "emqx.zones", [
+  {default, "0 | 0MB"},
+  {datatype, string}
+]}.
+
+{mapping, "zone.$name.mountpoint", "emqx.zones", [
+  {datatype, string}
 ]}.
 
 {translation, "emqx.zones", fun(Conf) ->
@@ -798,6 +771,35 @@ end}.
                     {mqtt_wildcard_subscription, Val};
                ("shared_subscription", Val) ->
                     {mqtt_shared_subscription, Val};
+               ("publish_limit", Val) ->
+                    [Limit, Duration] = string:tokens(Val, ", "),
+                    PubLimit = case cuttlefish_duration:parse(Duration, s) of
+                                   Secs when is_integer(Secs) ->
+                                       {list_to_integer(Limit) / Secs, list_to_integer(Limit)};
+                                   {error, Reason} ->
+                                       error(Reason)
+                               end,
+                    {publish_limit, PubLimit};
+               ("force_gc_policy", Val) ->
+                    [Count, Bytes] = string:tokens(Val, "| "),
+                    GcPolicy = case cuttlefish_bytesize:parse(Bytes) of
+                                   {error, Reason} ->
+                                       error(Reason);
+                                   Bytes1 ->
+                                       #{bytes => Bytes1,
+                                         count => list_to_integer(Count)}
+                               end,
+                    {force_gc_policy, GcPolicy};
+               ("force_shutdown_policy", Val) ->
+                    [Len, Siz] = string:tokens(Val, "| "),
+                    ShutdownPolicy = case cuttlefish_bytesize:parse(Siz) of
+                                         {error, Reason} ->
+                                             error(Reason);
+                                         Siz1 ->
+                                             #{message_queue_len => list_to_integer(Len),
+                                               max_heap_size => Siz1}
+                                     end,
+                    {force_shutdown_policy, ShutdownPolicy};
                (Opt, Val) ->
                     {list_to_atom(Opt), Val}
             end,
@@ -861,8 +863,7 @@ end}.
 ]}.
 
 {mapping, "listener.tcp.$name.peer_cert_as_username", "emqx.listeners", [
-  {default, false},
-  {datatype, {enum, [true, false]}}
+  {datatype, {enum, [cn, dn]}}
 ]}.
 
 {mapping, "listener.tcp.$name.backlog", "emqx.listeners", [
@@ -1062,6 +1063,11 @@ end}.
   {datatype, [integer, ip]}
 ]}.
 
+{mapping, "listener.ws.$name.mqtt_path", "emqx.listeners", [
+  {default, "/mqtt"},
+  {datatype, string}
+]}.
+
 {mapping, "listener.ws.$name.acceptors", "emqx.listeners", [
   {default, 8},
   {datatype, integer}
@@ -1161,6 +1167,11 @@ end}.
 
 {mapping, "listener.wss.$name", "emqx.listeners", [
   {datatype, [integer, ip]}
+]}.
+
+{mapping, "listener.wss.$name.mqtt_path", "emqx.listeners", [
+  {default, "/mqtt"},
+  {datatype, string}
 ]}.
 
 {mapping, "listener.wss.$name.acceptors", "emqx.listeners", [
@@ -1333,7 +1344,8 @@ end}.
                 end,
 
     LisOpts = fun(Prefix) ->
-                  Filter([{acceptors,   cuttlefish:conf_get(Prefix ++ ".acceptors", Conf)},
+                  Filter([{acceptors, cuttlefish:conf_get(Prefix ++ ".acceptors", Conf)},
+                          {mqtt_path, cuttlefish:conf_get(Prefix ++ ".mqtt_path", Conf, undefined)},
                           {max_connections, cuttlefish:conf_get(Prefix ++ ".max_connections", Conf)},
                           {max_conn_rate, cuttlefish:conf_get(Prefix ++ ".max_conn_rate", Conf, undefined)},
                           {tune_buffer, cuttlefish:conf_get(Prefix ++ ".tune_buffer", Conf, undefined)},
@@ -1411,12 +1423,7 @@ end}.
 %%--------------------------------------------------------------------
 %% Bridges
 %%--------------------------------------------------------------------
-
-{mapping, "bridge.$name.type", "emqx.bridges", [
-  {datatype, {enum, [in, out]}}
-]}.
-
-{mapping, "bridge.$name.store_type", "emqx.bridges", [
+{mapping, "bridge.$name.mqueue_type", "emqx.bridges", [
   {datatype, {enum, [memory, disk]}}
 ]}.
 
@@ -1425,7 +1432,7 @@ end}.
 ]}.
 
 {mapping, "bridge.$name.proto_ver", "emqx.bridges", [
-  {datatype, {enum, [mqtt3, mqtt4, mqtt5]}}
+  {datatype, {enum, [mqttv3, mqttv4, mqttv5]}}
 ]}.
 
 {mapping, "bridge.$name.client_id", "emqx.bridges", [
@@ -1449,7 +1456,7 @@ end}.
   {datatype, string}
 ]}.
 
-{mapping, "bridge.$name.forward_rule", "emqx.bridges", [
+{mapping, "bridge.$name.forwards", "emqx.bridges", [
   {datatype, string}
 ]}.
 
@@ -1496,12 +1503,7 @@ end}.
   {default, auto}
 ]}.
 
-{mapping, "bridge.$name.reconnect_count", "emqx.bridges", [
-  {default, 10},
-  {datatype, integer}
-]}.
-
-{mapping, "bridge.$name.reconnect_time", "emqx.bridges", [
+{mapping, "bridge.$name.reconnect_interval", "emqx.bridges", [
   {default, "30s"},
   {datatype, {duration, s}}
 ]}.
@@ -1655,9 +1657,16 @@ end}.
   {datatype, {enum, [local,one,quorum,all]}}
 ]}.
 
+%% @doc Shared Subscription Dispatch Strategy.
 {mapping, "broker.shared_subscription_strategy", "emqx.shared_subscription_strategy", [
-  {default, random},
-  {datatype, {enum, [random, round_robbin, hash]}}
+  {default, round_robbin},
+  {datatype,
+   {enum,
+    [random, %% randomly pick a subscriber
+     round_robbin, %% round robin alive subscribers one message after another
+     sticky, %% pick a random subscriber and stick to it
+     hash %% hash client ID to a group member
+    ]}}
 ]}.
 
 {mapping, "broker.route_batch_clean", "emqx.route_batch_clean", [
@@ -1707,3 +1716,4 @@ end}.
    {busy_port, cuttlefish:conf_get("sysmon.busy_port", Conf)},
    {busy_dist_port, cuttlefish:conf_get("sysmon.busy_dist_port", Conf)}]
 end}.
+
