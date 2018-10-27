@@ -37,7 +37,7 @@ check_acl({Credentials, PubSub, Topic}, #{acl_req := #http_request{
         {ok, 200, "ignore"} -> ignore;
         {ok, 200, _Body}   -> allow;
         {ok, _Code, _Body} -> deny;
-        {error, Error}     -> lager:error("Http check_acl url ~s Error: ~p", [Url, Error]),
+        {error, Error}     -> logger:error("Http check_acl url ~s Error: ~p", [Url, Error]),
                               deny
     end.
 

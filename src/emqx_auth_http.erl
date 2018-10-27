@@ -40,7 +40,7 @@ check(Credentials, Password, #{auth_req := #http_request{method = Method, url = 
         {ok, 200, "ignore"} -> ignore;
         {ok, 200, _Body}  -> {ok, is_superuser(SuperReq, Credentials)};
         {ok, Code, _Body} -> {error, Code};
-        {error, Error}    -> lager:error("HTTP ~s Error: ~p", [Url, Error]),
+        {error, Error}    -> logger:error("HTTP ~s Error: ~p", [Url, Error]),
                              {error, Error}
     end.
 
@@ -57,7 +57,7 @@ is_superuser(#http_request{method = Method, url = Url, params = Params}, Credeti
     case request(Method, Url, feedvar(Params, Credetials)) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
-        {error, Error}     -> lager:error("HTTP ~s Error: ~p", [Url, Error]),
+        {error, Error}     -> logger:error("HTTP ~s Error: ~p", [Url, Error]),
                               false
     end.
 
