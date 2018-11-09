@@ -65,7 +65,7 @@ read_schema_configs(App, {SchemaFile, ConfigFile}) ->
     Schema = cuttlefish_schema:files([SchemaFile]),
     Conf = conf_parse:file(ConfigFile),
     NewConfig = cuttlefish_generator:map(Schema, Conf),
-    Vals = proplists:get_value(App, NewConfig),
+    Vals = proplists:get_value(App, NewConfig, []),
     [application:set_env(App, Par, Value) || {Par, Value} <- Vals].
 
 set_special_configs(emqx) ->
