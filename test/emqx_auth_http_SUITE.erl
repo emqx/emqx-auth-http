@@ -128,16 +128,18 @@ check_auth(_) ->
 
 sub_pub(_) ->
     ct:pal("start client"),
-    {ok, T1, _} = emqx_client:start_link([{host, "localhost"},
-                                          {client_id, <<"client1">>},
-                                          {username, <<"testuser1">>},
-                                          {password, <<"pass1">>}]),
+    {ok, T1} = emqx_client:start_link([{host, "localhost"},
+                                       {client_id, <<"client1">>},
+                                       {username, <<"testuser1">>},
+                                       {password, <<"pass1">>}]),
+    {ok, _} = emqx_client:connect(T1),
     emqx_client:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
     timer:sleep(1000),
-    {ok, T2, _} = emqx_client:start_link([{host, "localhost"},
-                                          {client_id, <<"client2">>},
-                                          {username, <<"testuser2">>},
-                                          {password, <<"pass2">>}]),
+    {ok, T2} = emqx_client:start_link([{host, "localhost"},
+                                       {client_id, <<"client2">>},
+                                       {username, <<"testuser2">>},
+                                       {password, <<"pass2">>}]),
+    {ok, _} = emqx_client:connect(T2),
     emqx_client:subscribe(T2, <<"topic">>),
     receive
         {publish, _Topic, Payload} ->
