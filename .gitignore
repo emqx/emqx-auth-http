@@ -16,3 +16,5 @@ cover/
 ct.coverdata
 eunit.coverdata
 logs/
+_build/
+rebar.lock
