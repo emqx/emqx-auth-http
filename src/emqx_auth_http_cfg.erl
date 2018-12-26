@@ -1,5 +1,4 @@
-%%--------------------------------------------------------------------
-%% Copyright (c) 2013-2018 EMQ Enterprise, Inc. (http://emqtt.io)
+%% Copyright (c) 2018 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -12,16 +11,13 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
-%%--------------------------------------------------------------------
--module (emq_auth_http_config).
 
--include("emq_auth_http.hrl").
+-module(emqx_auth_http_cfg).
+
+-include("emqx_auth_http.hrl").
 
 -export ([register/0, unregister/0]).
 
-%%--------------------------------------------------------------------
-%% API
-%%--------------------------------------------------------------------
 register() ->
     clique_config:load_schema([code:priv_dir(?APP)], ?APP),
     register_formatter(),
@@ -32,9 +28,6 @@ unregister() ->
     unregister_config(),
     clique_config:unload_schema(?APP).
 
-%%--------------------------------------------------------------------
-%% Get ENV Register formatter
-%%--------------------------------------------------------------------
 register_formatter() ->
     [clique:register_formatter(cuttlefish_variable:tokenize(Key), fun formatter_callback/2) || Key <- keys()].
 
@@ -45,15 +38,9 @@ formatter_callback([_, _, _, "params"], Params) ->
 formatter_callback([_, _, _, Key], Params) ->
     proplists:get_value(list_to_atom(Key), Params).
 
-%%--------------------------------------------------------------------
-%% UnRegister formatter
-%%--------------------------------------------------------------------
 unregister_formatter() ->
     [clique:unregister_formatter(cuttlefish_variable:tokenize(Key)) || Key <- keys()].
 
-%%--------------------------------------------------------------------
-%% Set ENV Register Config
-%%--------------------------------------------------------------------
 register_config() ->
     Keys = keys(),
     [clique:register_config(Key , fun config_callback/2) || Key <- Keys],
@@ -77,17 +64,11 @@ config_callback([_, _, Key0, Key1], Value) ->
     application:set_env(?APP, Key2, lists:keyreplace(Key3, 1, Env, {Key3, Value})),
     " successfully\n".
 
-%%--------------------------------------------------------------------
-%% UnRegister config
-%%--------------------------------------------------------------------
 unregister_config() ->
     Keys = keys(),
     [clique:unregister_config(Key) || Key <- Keys],
     clique:unregister_config_whitelist(Keys, ?APP).
 
-%%--------------------------------------------------------------------
-%% Internal Functions
-%%--------------------------------------------------------------------
 format(Params) ->
     format(Params, "").
 format([{Key, Value}], Acc) ->
@@ -105,3 +86,4 @@ keys() ->
      "auth.http.acl_req",
      "auth.http.acl_req.method",
      "auth.http.acl_req.params"].
+

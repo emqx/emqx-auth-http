@@ -1,32 +1,30 @@
-PROJECT = emq_auth_http
-PROJECT_DESCRIPTION = Authentication/ACL with HTTP API
-PROJECT_VERSION = 2.3.11
+PROJECT = emqx_auth_http
+PROJECT_DESCRIPTION = EMQ X Authentication/ACL with HTTP API
+PROJECT_VERSION = 3.0
 
 DEPS = clique
-dep_clique  = git https://github.com/emqtt/clique v0.3.10
+dep_clique = git-emqx https://github.com/emqx/clique v0.3.11
 
-BUILD_DEPS = emqttd cuttlefish
-dep_emqttd = git https://github.com/emqtt/emqttd master
-dep_cuttlefish = git https://github.com/emqtt/cuttlefish v2.0.11
+BUILD_DEPS = emqx cuttlefish
+dep_emqx = git-emqx https://github.com/emqx/emqx master
+dep_cuttlefish = git-emqx https://github.com/emqx/cuttlefish v2.2.0
 
 ERLC_OPTS += +debug_info
-ERLC_OPTS += +'{parse_transform, lager_transform}'
 
 NO_AUTOPATCH = cuttlefish
 
-TEST_DEPS = emqttc emq_retainer
-dep_emqttc = git https://github.com/emqtt/emqttc.git master
-dep_emq_retainer  = git https://github.com/emqtt/emq-retainer master
+TEST_DEPS = emqx_retainer cowboy
+dep_emqx_retainer = git-emqx https://github.com/emqx/emqx-retainer master
+dep_cowboy = git-emqx https://github.com/ninenines/cowboy.git 2.4.0
 
 TEST_ERLC_OPTS += +debug_info
-TEST_ERLC_OPTS += +'{parse_transform, lager_transform}'
 
 COVER = true
 
+$(shell [ -f erlang.mk ] || curl -s -o erlang.mk https://raw.githubusercontent.com/emqx/erlmk/master/erlang.mk)
 include erlang.mk
 
 app:: rebar.config
 
 app.config::
-	./deps/cuttlefish/cuttlefish -l info -e etc/ -c etc/emq_auth_http.conf -i priv/emq_auth_http.schema -d data
-
+	./deps/cuttlefish/cuttlefish -l info -e etc/ -c etc/emqx_auth_http.conf -i priv/emqx_auth_http.schema -d data

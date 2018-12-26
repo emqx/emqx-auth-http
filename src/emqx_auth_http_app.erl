@@ -1,5 +1,4 @@
-%%--------------------------------------------------------------------
-%% Copyright (c) 2013-2018 EMQ Enterprise, Inc. (http://emqtt.io)
+%% Copyright (c) 2018 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -12,18 +11,15 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
-%%--------------------------------------------------------------------
 
--module(emq_auth_http_app).
+-module(emqx_auth_http_app).
 
 -behaviour(application).
-
--include("emq_auth_http.hrl").
-
--export([start/2, stop/1]).
-
 -behaviour(supervisor).
 
+-include("emqx_auth_http.hrl").
+
+-export([start/2, stop/1]).
 -export([init/1]).
 
 %%--------------------------------------------------------------------
@@ -33,30 +29,30 @@
 start(_StartType, _StartArgs) ->
     with_env(auth_req, fun reg_authmod/1),
     with_env(acl_req,  fun reg_aclmod/1),
-    emq_auth_http_config:register(),
+    emqx_auth_http_cfg:register(),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 reg_authmod(AuthReq) ->
     SuperReq = r(application:get_env(?APP, super_req, undefined)),
-    emqttd_access_control:register_mod(auth, emq_auth_http, {AuthReq, SuperReq}).
+    emqx_access_control:register_mod(auth, emqx_auth_http, {AuthReq, SuperReq}).
 
 reg_aclmod(AclReq) ->
-    emqttd_access_control:register_mod(acl, emq_acl_http, AclReq).
+    emqx_access_control:register_mod(acl, emqx_acl_http, AclReq).
 
 stop(_State) ->
-    emqttd_access_control:unregister_mod(acl, emq_acl_http),
-    emqttd_access_control:unregister_mod(auth, emq_auth_http),
-    emq_auth_http_config:unregister().
+    emqx_access_control:unregister_mod(acl, emqx_acl_http),
+    emqx_access_control:unregister_mod(auth, emqx_auth_http),
+    emqx_auth_http_cfg:unregister().
 
 %%--------------------------------------------------------------------
-%% Dummy Supervisor
+%% Dummy supervisor
 %%--------------------------------------------------------------------
 
 init([]) ->
     {ok, { {one_for_all, 10, 100}, []} }.
 
 %%--------------------------------------------------------------------
-%% Internel Functions
+%% Internel functions
 %%--------------------------------------------------------------------
 
 with_env(Par, Fun) ->
@@ -67,7 +63,6 @@ with_env(Par, Fun) ->
 
 r(undefined) ->
     undefined;
-
 r(Config) ->
     Method = proplists:get_value(method, Config, post),
     Url    = proplists:get_value(url, Config),
