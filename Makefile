@@ -2,11 +2,11 @@ PROJECT = emqx_auth_http
 PROJECT_DESCRIPTION = EMQ X Authentication/ACL with HTTP API
 
 DEPS = clique
-dep_clique = git-emqx https://github.com/emqx/clique develop
+dep_clique = git-emqx https://github.com/emqx/clique v0.3.11
 
 BUILD_DEPS = emqx cuttlefish
 dep_emqx = git-emqx https://github.com/emqx/emqx emqx30
-dep_cuttlefish = git-emqx https://github.com/emqx/cuttlefish emqx30
+dep_cuttlefish = git-emqx https://github.com/emqx/cuttlefish v2.2.1
 
 ERLC_OPTS += +debug_info
 

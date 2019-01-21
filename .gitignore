@@ -17,3 +17,5 @@ ct.coverdata
 eunit.coverdata
 logs/
 erlang.mk
+_build/
+rebar.lock
