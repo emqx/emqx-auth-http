@@ -6,7 +6,7 @@ DEPS = clique
 dep_clique = git-emqx https://github.com/emqx/clique v0.3.11
 
 BUILD_DEPS = emqx cuttlefish
-dep_emqx = git-emqx https://github.com/emqx/emqx testing
+dep_emqx = git-emqx https://github.com/emqx/emqx develop
 dep_cuttlefish = git-emqx https://github.com/emqx/cuttlefish v2.2.1
 
 ERLC_OPTS += +debug_info
@@ -14,7 +14,7 @@ ERLC_OPTS += +debug_info
 NO_AUTOPATCH = cuttlefish
 
 TEST_DEPS = emqx_retainer cowboy
-dep_emqx_retainer = git-emqx https://github.com/emqx/emqx-retainer testing
+dep_emqx_retainer = git-emqx https://github.com/emqx/emqx-retainer develop
 dep_cowboy = git-emqx https://github.com/ninenines/cowboy.git 2.4.0
 
 TEST_ERLC_OPTS += +debug_info
