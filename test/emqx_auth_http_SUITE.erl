@@ -43,9 +43,7 @@ init_per_suite(Config) ->
         <- [{emqx, local_path("deps/emqx/priv/emqx.schema"),
                    local_path("deps/emqx/etc/emqx.conf")},
             {emqx_auth_http, local_path("priv/emqx_auth_http.schema"),
-                             local_path("etc/emqx_auth_http.conf")},
-            {emqx_retainer, local_path("deps/emqx_retainer/priv/emqx_retainer.schema"),
-                            local_path("deps/emqx_retainer/etc/emqx_retainer.conf")}]],
+                             local_path("etc/emqx_auth_http.conf")}]],
     Config.
 
 get_base_dir() ->
@@ -78,7 +76,7 @@ set_special_configs(_App) ->
 
 end_per_suite(_Config) ->
     http_auth_server:stop_http(),
-    [application:stop(App) || App <- [emqx_retainer, emqx_auth_http, emqx]].
+    [application:stop(App) || App <- [emqx_auth_http, emqx]].
 
 init_per_testcase(_) ->
     ok.

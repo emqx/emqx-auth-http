@@ -1,11 +1,11 @@
 PROJECT = emqx_auth_http
 PROJECT_DESCRIPTION = EMQ X Authentication/ACL with HTTP API
 
-DEPS = clique
-dep_clique = git-emqx https://github.com/emqx/clique v0.3.11
-
 CUR_BRANCH := $(shell git branch | grep -e "^*" | cut -d' ' -f 2)
 BRANCH := $(if $(filter $(CUR_BRANCH), master develop testing), $(CUR_BRANCH), testing)
+
+DEPS = clique
+dep_clique = git-emqx https://github.com/emqx/clique v0.3.11
 
 BUILD_DEPS = emqx cuttlefish
 dep_emqx = git-emqx https://github.com/emqx/emqx $(BRANCH)
@@ -15,8 +15,7 @@ ERLC_OPTS += +debug_info
 
 NO_AUTOPATCH = cuttlefish
 
-TEST_DEPS = emqx_retainer cowboy
-dep_emqx_retainer = git-emqx https://github.com/emqx/emqx-retainer $(BRANCH)
+TEST_DEPS = cowboy
 dep_cowboy = git-emqx https://github.com/ninenines/cowboy.git 2.4.0
 
 TEST_ERLC_OPTS += +debug_info
