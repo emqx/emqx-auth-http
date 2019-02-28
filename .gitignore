@@ -19,3 +19,4 @@ logs/
 erlang.mk
 _build/
 rebar.lock
+rebar3.crashdump
