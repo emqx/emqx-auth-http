@@ -23,25 +23,28 @@
 -import(emqx_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
 
 %% Callbacks
--export([init/1, check/3, description/0]).
+-export([init/1, check/2, description/0]).
 
 -define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
 
 init({AuthReq, SuperReq}) ->
     {ok, #{auth_req => AuthReq, super_req => SuperReq}}.
 
-check(#{username := Username}, Password, _Env) when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
-    {error, username_or_password_undefined};
+check(Credentials = #{username := Username, password := Password}, _Config) 
+  when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
+    {ok, Credentials#{result => username_or_password_undefined}};
 
-check(Credentials, Password, #{auth_req := #http_request{method = Method, url = Url, params = Params},
-                               super_req := SuperReq}) ->
+check(Credentials = #{password := Password},
+      #{auth_req := #http_request{method = Method, url = Url, params = Params},
+        super_req := SuperReq}) ->
     Params1 = feedvar(feedvar(Params, Credentials), "%P", Password),
     case request(Method, Url, Params1) of
-        {ok, 200, "ignore"} -> ignore;
-        {ok, 200, _Body}  -> {ok, is_superuser(SuperReq, Credentials)};
-        {ok, Code, _Body} -> {error, Code};
+        {ok, 200, "ignore"} -> ok;
+        {ok, 200, _Body}  -> {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials),
+                                                 result       => success}};
+        {ok, Code, _Body} -> {stop, Credentials#{result => Code}};
         {error, Error}    -> logger:error("HTTP ~s Error: ~p", [Url, Error]),
-                             {error, Error}
+                             {stop, Credentials#{result => Error}}
     end.
 
 description() -> "Authentication by HTTP API".
