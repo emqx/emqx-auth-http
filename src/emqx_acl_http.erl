@@ -14,8 +14,6 @@
 
 -module(emqx_acl_http).
 
--behaviour(emqx_acl_mod).
-
 -include("emqx_auth_http.hrl").
 
 -include_lib("emqx/include/emqx.hrl").
@@ -23,10 +21,7 @@
 -import(emqx_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
 
 %% ACL callbacks
--export([init/1, check_acl/5, reload_acl/1, description/0]).
-
-init(AclReq) ->
-	{ok, #{acl_req => AclReq}}.
+-export([check_acl/5, reload_acl/1, description/0]).
 
 check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;

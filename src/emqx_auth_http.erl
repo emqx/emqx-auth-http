@@ -14,8 +14,6 @@
 
 -module(emqx_auth_http).
 
--behaviour(emqx_auth_mod).
-
 -include("emqx_auth_http.hrl").
 
 -include_lib("emqx/include/emqx.hrl").
@@ -23,12 +21,9 @@
 -import(emqx_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
 
 %% Callbacks
--export([init/1, check/2, description/0]).
+-export([check/2, description/0]).
 
 -define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
-
-init({AuthReq, SuperReq}) ->
-    {ok, #{auth_req => AuthReq, super_req => SuperReq}}.
 
 check(Credentials = #{username := Username, password := Password}, _Config) 
   when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
@@ -63,4 +58,3 @@ is_superuser(#http_request{method = Method, url = Url, params = Params}, Credeti
         {error, Error}     -> logger:error("HTTP ~s Error: ~p", [Url, Error]),
                               false
     end.
-
