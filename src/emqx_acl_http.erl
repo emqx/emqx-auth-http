@@ -23,22 +23,24 @@
 -import(emqx_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
 
 %% ACL callbacks
--export([init/1, check_acl/2, reload_acl/1, description/0]).
+-export([init/1, check_acl/5, reload_acl/1, description/0]).
 
 init(AclReq) ->
 	{ok, #{acl_req => AclReq}}.
 
-check_acl({Credentials, PubSub, Topic}, #{acl_req := #http_request{
-                                            method = Method,
-                                            url = Url,
-                                            params = Params}}) ->
+check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
+    ok;
+check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := #http_request{
+                                                                 method = Method,
+                                                                 url = Url,
+                                                                 params = Params}}) ->
     Params1 = feedvar(feedvar(feedvar(Params, Credentials), "%A", access(PubSub)), "%t", Topic),
     case request(Method, Url, Params1) of
-        {ok, 200, "ignore"} -> ignore;
-        {ok, 200, _Body}   -> allow;
-        {ok, _Code, _Body} -> deny;
+        {ok, 200, "ignore"} -> ok;
+        {ok, 200, _Body}   -> {stop, allow};
+        {ok, _Code, _Body} -> {stop, deny};
         {error, Error}     -> logger:error("Http check_acl url ~s Error: ~p", [Url, Error]),
-                              deny
+                              ok
     end.
 
 access(subscribe) -> 1;
