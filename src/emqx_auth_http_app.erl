@@ -27,21 +27,23 @@
 %%--------------------------------------------------------------------
 
 start(_StartType, _StartArgs) ->
-    with_env(auth_req, fun reg_authmod/1),
-    with_env(acl_req,  fun reg_aclmod/1),
+    with_env(auth_req, fun load_auth_hook/1),
+    with_env(acl_req,  fun load_acl_hook/1),
     emqx_auth_http_cfg:register(),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-reg_authmod(AuthReq) ->
+load_auth_hook(AuthReq) ->
     SuperReq = r(application:get_env(?APP, super_req, undefined)),
-    emqx_access_control:register_mod(auth, emqx_auth_http, {AuthReq, SuperReq}).
+    Params = #{auth_req => AuthReq,
+               super_req => SuperReq},
+    emqx:hook('client.authenticate', fun emqx_auth_http:check/2, [Params]).
 
-reg_aclmod(AclReq) ->
-    emqx_access_control:register_mod(acl, emqx_acl_http, AclReq).
+load_acl_hook(AclReq) ->
+    emqx:hook('client.check_acl', fun emqx_acl_http:check_acl/5, [#{acl_req => AclReq}]).
 
 stop(_State) ->
-    emqx_access_control:unregister_mod(acl, emqx_acl_http),
-    emqx_access_control:unregister_mod(auth, emqx_auth_http),
+    emqx:unhook('client.authenticate', fun emqx_auth_http:check/2),
+    emqx:unhook('client.check_acl', fun emqx_acl_http:check_acl/5),
     emqx_auth_http_cfg:unregister().
 
 %%--------------------------------------------------------------------
