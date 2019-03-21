@@ -84,7 +84,7 @@ reply(Req, deny) ->
     cowboy_req:reply(404, #{<<"content-type">> => <<"text/plain">>}, <<"deny">>, Req).
 
 check(_Params, []) ->
-    %ct:pal("check result: deny~n"),
+    %ct:pal("check auth_result: deny~n"),
     deny;
 check(Params, [ConfRecord|T]) ->
     %ct:pal("Params: ~p, ConfRecord:~p ~n", [Params, ConfRecord]),
@@ -95,7 +95,7 @@ check(Params, [ConfRecord|T]) ->
      end.
 
 match_config([], _ConfigColumn) ->
-    %ct:pal("match_config result: matched~n"),
+    %ct:pal("match_config auth_result: matched~n"),
     matched;
 
 match_config([Param|T], ConfigColumn) ->
