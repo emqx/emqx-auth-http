@@ -116,10 +116,10 @@ check_auth(_) ->
 
     {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User1#{password => <<"pass1">>}),
     {error, 404} = emqx_access_control:authenticate(User1#{password => <<"pass">>}),
-    {error, username_or_password_undefined} = emqx_access_control:authenticate(User1#{password => <<>>}),
+    {error, bad_username_or_password} = emqx_access_control:authenticate(User1#{password => <<>>}),
 
     {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User2#{password => <<"pass2">>}),
-    {error, username_or_password_undefined} = emqx_access_control:authenticate(User2#{password => <<>>}),
+    {error, bad_username_or_password} = emqx_access_control:authenticate(User2#{password => <<>>}),
     {error, 404} = emqx_access_control:authenticate(User2#{password => <<"errorpwd">>}),
 
     {error, _} = emqx_access_control:authenticate(User3#{password => <<"pwd">>}).
