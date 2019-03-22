@@ -17,9 +17,13 @@
 -behaviour(application).
 -behaviour(supervisor).
 
+-emqx_plugin(?MODULE).
+
 -include("emqx_auth_http.hrl").
 
--export([start/2, stop/1]).
+-export([ start/2
+        , stop/1
+        ]).
 -export([init/1]).
 
 %%--------------------------------------------------------------------
@@ -39,7 +43,6 @@ load_auth_hook(AuthReq) ->
     emqx:hook('client.authenticate', fun emqx_auth_http:check/2, [Params]).
 
 load_acl_hook(AclReq) ->
-    io:format("sssssssss~n"),
     emqx:hook('client.check_acl', fun emqx_acl_http:check_acl/5, [#{acl_req => AclReq}]).
 
 stop(_State) ->
