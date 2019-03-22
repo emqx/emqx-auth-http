@@ -21,7 +21,9 @@
 
 -include("emqx_auth_http.hrl").
 
--export([start/2, stop/1]).
+-export([ start/2
+        , stop/1
+        ]).
 -export([init/1]).
 
 %%--------------------------------------------------------------------
