@@ -21,7 +21,9 @@
 -import(emqx_auth_http_cli, [request/3, feedvar/2, feedvar/3]).
 
 %% Callbacks
--export([check/2, description/0]).
+-export([  check/2
+         , description/0
+         ]).
 
 -define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
 
