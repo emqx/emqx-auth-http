@@ -68,10 +68,12 @@ bin(Binary) when is_binary(Binary) ->
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, _Credentials = #{username := Username, client_id := ClientId, peername := {IpAddr, _}}) ->
+feedvar(Params, Credentials = #{username := Username, client_id := ClientId, peername := {IpAddr, _}}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
                  ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
+                 ({Param, "%cn"}) -> {Param, maps:get(cn, Credentials, undefined)};
+                 ({Param, "%dn"}) -> {Param, maps:get(dn, Credentials, undefined)};
                  ({Param, Var})  -> {Param, Var}
               end, Params).
 
@@ -81,3 +83,4 @@ feedvar(Params, Var, Val) ->
                  ({Param, Var0}) ->
                       {Param, Var0}
               end, Params).
+
