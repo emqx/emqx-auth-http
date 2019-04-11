@@ -29,7 +29,10 @@ all() ->
 
 groups() ->
     [{emqx_auth_http, [sequence],
-        [t_check_acl, t_check_auth, t_sub_pub, t_comment_config]}
+      [ t_check_acl
+      , t_check_auth
+      , t_sub_pub
+      , t_comment_config]}
     ].
 
 init_per_suite(Config) ->
@@ -45,29 +48,16 @@ end_per_suite(_Config) ->
 set_special_configs(emqx) ->
     application:set_env(emqx, allow_anonymous, false),
     application:set_env(emqx, enable_acl_cache, false),
+    LoadedPluginPath = filename:join(["test", "emqx_SUITE_data", "loaded_plugins"]),
     application:set_env(emqx, plugins_loaded_file,
-                        local_path("deps/emqx/test/emqx_SUITE_data/loaded_plugins"));
+                        emqx_ct_helpers:deps_path(emqx, LoadedPluginPath));
 
 set_special_configs(emqx_auth_http) ->
     AuthReq = maps:from_list(application:get_env(emqx_auth_http, auth_req, [])),
     SuprReq = maps:from_list(application:get_env(emqx_auth_http, super_req, [])),
     application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq#{method := get})),
     application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq#{method := get}));
-
 set_special_configs(_App) ->
-    ok.
-
-local_path(RelativePath) ->
-    filename:join([get_base_dir(), RelativePath]).
-
-get_base_dir() ->
-    {file, Here} = code:is_loaded(?MODULE),
-    filename:dirname(filename:dirname(Here)).
-
-init_per_testcase(_) ->
-    ok.
-
-end_per_testcase(_) ->
     ok.
 
 %%------------------------------------------------------------------------------
@@ -78,7 +68,7 @@ t_check_acl(_) ->
     %ct:pal("all configs: ~p ", [application:get_all_env(?APP)]),
     %ct:pal("emqx all configs: ~p ", [application:get_all_env(emqx)]),
     SuperUser = #{client_id => <<"superclient">>, username => <<"superuser">>,
-                  peername => {{127,0,0,1}, 2982}, zone => external},
+                  peername => {{127, 0, 0, 1}, 2982}, zone => external},
     deny = emqx_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
 
