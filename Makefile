@@ -15,8 +15,8 @@ ERLC_OPTS += +debug_info
 
 NO_AUTOPATCH = cuttlefish
 
-TEST_DEPS = cowboy
-dep_cowboy = git-emqx https://github.com/ninenines/cowboy.git 2.4.0
+TEST_DEPS = minirest
+dep_minirest = git-emqx https://github.com/emqx/minirest v0.2.2
 
 TEST_ERLC_OPTS += +debug_info
 
