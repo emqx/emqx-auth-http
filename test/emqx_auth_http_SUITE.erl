@@ -71,6 +71,12 @@ set_special_configs(emqx) ->
     application:set_env(emqx, enable_acl_cache, false),
     application:set_env(emqx, plugins_loaded_file,
                         local_path("deps/emqx/test/emqx_SUITE_data/loaded_plugins"));
+set_special_configs(emqx_auth_http) ->
+    AuthReq = maps:from_list(application:get_env(emqx_auth_http, auth_req, [])),
+    SuprReq = maps:from_list(application:get_env(emqx_auth_http, super_req, [])),
+    application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq#{method := get})),
+    application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq#{method := get}));
+
 set_special_configs(_App) ->
     ok.
 
@@ -109,10 +115,9 @@ check_acl(_) ->
     deny  = emqx_access_control:check_acl(User2, subscribe, <<"$SYS/testuser/1">>).
 
 check_auth(_) ->
-%    {ok, Default} = application:get_env(emqx, allow_anonymous),
-    User1 = #{client_id => <<"client1">>, username => <<"testuser1">>, peername => {{127,0,0,1}, 2981}},
-    User2 = #{client_id => <<"client2">>, username => <<"testuser2">>, peername => {{127,0,0,1}, 2982}},
-    User3 = #{client_id => <<"client3">>, username => undefined, peername => {{127,0,0,1}, 2983}},
+    User1 = #{client_id => <<"client1">>, username => <<"testuser1">>, peername => {{127,0,0,1}, 2981}, mountpoint => undefined},
+    User2 = #{client_id => <<"client2">>, username => <<"testuser2">>, peername => {{127,0,0,1}, 2982}, mountpoint => undefined},
+    User3 = #{client_id => <<"client3">>, username => undefined, peername => {{127,0,0,1}, 2983}, mountpoint => undefined},
 
     {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User1#{password => <<"pass1">>}),
     {error, 404} = emqx_access_control:authenticate(User1#{password => <<"pass">>}),

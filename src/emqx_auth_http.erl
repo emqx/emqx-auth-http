@@ -72,6 +72,9 @@ mountpoint(Body, Credetials) when is_list(Body) ->
 mountpoint(Body, #{mountpoint := Mountpoint}) ->
     case emqx_json:safe_decode(Body, [return_maps]) of
         {error, _} -> Mountpoint;
-        {ok, Json} -> maps:get(<<"mountpoint">>, Json, Mountpoint)
+        {ok, Json} when is_map(Json) ->
+            maps:get(<<"mountpoint">>, Json, Mountpoint);
+        {ok, _NotMap} ->
+            Mountpoint
     end.
 
