@@ -41,8 +41,9 @@ check(Credentials = #{password := Password},
     Params1 = feedvar(feedvar(Params, Credentials), "%P", Password),
     case request(Method, Url, Params1) of
         {ok, 200, "ignore"} -> ok;
-        {ok, 200, _Body}  -> {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials),
-                                                 auth_result  => success}};
+        {ok, 200, Body}  -> {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials),
+                                                 auth_result => success,
+                                                 mountpoint  => mountpoint(Body, Credentials)}};
         {ok, Code, _Body} -> {stop, Credentials#{auth_result => Code}};
         {error, Error}    -> logger:error("HTTP ~s Error: ~p", [Url, Error]),
                              {stop, Credentials#{auth_result => Error}}
@@ -51,7 +52,7 @@ check(Credentials = #{password := Password},
 description() -> "Authentication by HTTP API".
 
 %%--------------------------------------------------------------------
-%% Is Superuser?
+%% Is Superuser
 %%--------------------------------------------------------------------
 
 -spec(is_superuser(undefined | #http_request{}, emqx_types:credetials()) -> boolean()).
@@ -64,3 +65,16 @@ is_superuser(#http_request{method = Method, url = Url, params = Params}, Credeti
         {error, Error}     -> logger:error("HTTP ~s Error: ~p", [Url, Error]),
                               false
     end.
+
+mountpoint(Body, Credetials) when is_list(Body) ->
+    mountpoint(list_to_binary(Body), Credetials);
+
+mountpoint(Body, #{mountpoint := Mountpoint}) ->
+    case emqx_json:safe_decode(Body, [return_maps]) of
+        {error, _} -> Mountpoint;
+        {ok, Json} when is_map(Json) ->
+            maps:get(<<"mountpoint">>, Json, Mountpoint);
+        {ok, _NotMap} ->
+            Mountpoint
+    end.
+
