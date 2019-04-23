@@ -17,6 +17,7 @@
 -include("emqx_auth_http.hrl").
 
 -include_lib("emqx/include/emqx.hrl").
+-include_lib("emqx/include/logger.hrl").
 
 -import(emqx_auth_http_cli,
         [ request/3
@@ -41,7 +42,7 @@ check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := #http_request{
         {ok, 200, "ignore"} -> ok;
         {ok, 200, _Body}   -> {stop, allow};
         {ok, _Code, _Body} -> {stop, deny};
-        {error, Error}     -> logger:error("Http check_acl url ~s Error: ~p", [Url, Error]),
+        {error, Error}     -> ?LOG(error, "[ACL http] check_acl url ~s Error: ~p", [Url, Error]),
                               ok
     end.
 
