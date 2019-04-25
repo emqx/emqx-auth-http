@@ -19,7 +19,7 @@ NO_AUTOPATCH = cuttlefish
 
 TEST_DEPS = minirest emqx_ct_helper
 dep_minirest = git-emqx https://github.com/emqx/minirest v0.2.2
-dep_emqx_ct_helper = git-emqx https://github.com/emqx/emqx-ct-helpers $(BRANCH)
+dep_emqx_ct_helper = git-emqx https://github.com/emqx/emqx-ct-helpers v1.0
 
 TEST_ERLC_OPTS += +debug_info
 
