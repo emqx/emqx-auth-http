@@ -17,6 +17,7 @@
 -include("emqx_auth_http.hrl").
 
 -include_lib("emqx/include/emqx.hrl").
+-include_lib("emqx/include/logger.hrl").
 
 -import(emqx_auth_http_cli,
         [ request/3
@@ -45,7 +46,7 @@ check(Credentials = #{password := Password},
                                                  auth_result => success,
                                                  mountpoint  => mountpoint(Body, Credentials)}};
         {ok, Code, _Body} -> {stop, Credentials#{auth_result => Code}};
-        {error, Error}    -> logger:error("HTTP ~s Error: ~p", [Url, Error]),
+        {error, Error}    -> ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [Url, Error]),
                              {stop, Credentials#{auth_result => Error}}
     end.
 
@@ -72,6 +73,9 @@ mountpoint(Body, Credetials) when is_list(Body) ->
 mountpoint(Body, #{mountpoint := Mountpoint}) ->
     case emqx_json:safe_decode(Body, [return_maps]) of
         {error, _} -> Mountpoint;
-        {ok, Json} -> maps:get(<<"mountpoint">>, Json, Mountpoint)
+        {ok, Json} when is_map(Json) ->
+            maps:get(<<"mountpoint">>, Json, Mountpoint);
+        {ok, _NotMap} ->
+            Mountpoint
     end.
 
