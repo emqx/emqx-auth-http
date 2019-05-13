@@ -20,7 +20,7 @@
 -include_lib("emqx/include/logger.hrl").
 
 -import(emqx_auth_http_cli,
-        [ request/3
+        [ request/5
         , feedvar/2
         , feedvar/3
         ]).
@@ -33,12 +33,12 @@
 
 check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;
-check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := #http_request{
-                                                                 method = Method,
-                                                                 url = Url,
-                                                                 params = Params}}) ->
+check_acl(Credentials, PubSub, Topic, _AclResult,
+          #{acl_req := #http_request{method = Method, url = Url, params = Params},
+            http_opts := HttpOpts,
+            retry_opts := RetryOpts}) ->
     Params1 = feedvar(feedvar(feedvar(Params, Credentials), "%A", access(PubSub)), "%t", Topic),
-    case request(Method, Url, Params1) of
+    case request(Method, Url, Params1, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} -> ok;
         {ok, 200, _Body}   -> {stop, allow};
         {ok, _Code, _Body} -> {stop, deny};
