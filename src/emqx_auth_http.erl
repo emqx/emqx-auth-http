@@ -22,7 +22,6 @@
 -import(emqx_auth_http_cli,
         [ request/5
         , feedvar/2
-        , feedvar/3
         ]).
 
 %% Callbacks
