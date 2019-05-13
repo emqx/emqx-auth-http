@@ -22,7 +22,6 @@
 -import(emqx_auth_http_cli,
         [ request/3
         , feedvar/2
-        , feedvar/3
         ]).
 
 %% Callbacks
@@ -36,10 +35,9 @@ check(Credentials = #{username := Username, password := Password}, _Config)
   when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
     {ok, Credentials#{auth_result => bad_username_or_password}};
 
-check(Credentials = #{password := Password},
-      #{auth_req := #http_request{method = Method, url = Url, params = Params},
-        super_req := SuperReq}) ->
-    Params1 = feedvar(feedvar(Params, Credentials), "%P", Password),
+check(Credentials, #{auth_req := #http_request{method = Method, url = Url, params = Params},
+                     super_req := SuperReq}) ->
+    Params1 = feedvar(Params, Credentials),
     case request(Method, Url, Params1) of
         {ok, 200, "ignore"} -> ok;
         {ok, 200, Body}  -> {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials),

@@ -22,7 +22,6 @@
 -import(emqx_auth_http_cli,
         [ request/3
         , feedvar/2
-        , feedvar/3
         ]).
 
 %% ACL callbacks
@@ -37,7 +36,7 @@ check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := #http_request{
                                                                  method = Method,
                                                                  url = Url,
                                                                  params = Params}}) ->
-    Params1 = feedvar(feedvar(feedvar(Params, Credentials), "%A", access(PubSub)), "%t", Topic),
+    Params1 = feedvar(Params, Credentials#{access => access(PubSub), topic => Topic}),
     case request(Method, Url, Params1) of
         {ok, 200, "ignore"} -> ok;
         {ok, 200, _Body}   -> {stop, allow};
