@@ -14,9 +14,7 @@
 
 -module(emqx_auth_http_cli).
 
--include_lib("emqx/include/emqx.hrl").
-
--export([ request/3
+-export([ request/5
         , feedvar/2
         , feedvar/3
         ]).
@@ -25,20 +23,21 @@
 %% HTTP Request
 %%--------------------------------------------------------------------
 
-request(get, Url, Params) ->
+request(get, Url, Params, HttpOpts, RetryOpts) ->
     Req = {Url ++ "?" ++ cow_qs:qs(bin_kw(Params)), []},
-    reply(request_(get, Req, [{autoredirect, true}], [], 0));
+    reply(request_(get, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts));
 
-request(post, Url, Params) ->
+request(post, Url, Params, HttpOpts, RetryOpts) ->
     Req = {Url, [], "application/x-www-form-urlencoded", cow_qs:qs(bin_kw(Params))},
-    reply(request_(post, Req, [{autoredirect, true}], [], 0)).
+    reply(request_(post, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts)).
 
-request_(Method, Req, HTTPOpts, Opts, Times) ->
+request_(Method, Req, HTTPOpts, Opts, RetryOpts = #{times := Times,
+                                                    interval := Interval}) ->
     %% Resend request, when TCP closed by remotely
     case httpc:request(Method, Req, HTTPOpts, Opts) of
-        {error, socket_closed_remotely} when Times < 3 ->
-            timer:sleep(trunc(math:pow(10, Times))),
-            request_(Method, Req, HTTPOpts, Opts, Times+1);
+        {error, socket_closed_remotely} when Times > 0 ->
+            timer:sleep(Interval),
+            request_(Method, Req, HTTPOpts, Opts, backoff(RetryOpts));
         Other -> Other
     end.
 
@@ -48,6 +47,9 @@ reply({ok, Code, Body}) ->
     {ok, Code, Body};
 reply({error, Error}) ->
     {error, Error}.
+
+backoff(Opts = #{times := Times, interval := Interval, backoff := BackOff}) ->
+    Opts#{times := Times - 1, interval := Interval * BackOff}.
 
 %% TODO: move this conversion to cuttlefish config and schema
 bin_kw(KeywordList) when is_list(KeywordList) ->
