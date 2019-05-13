@@ -35,17 +35,17 @@ check(Credentials = #{username := Username, password := Password}, _Config)
   when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
     {ok, Credentials#{auth_result => bad_username_or_password}};
 
-check(Credentials = #{password := Password}, #{auth_req := AuthReq,
-                                               super_req := SuperReq,
-                                               http_opts := HttpOpts,
-                                               retry_opts := RetryOpts}) ->
+check(Credentials, #{auth_req := AuthReq,
+                     super_req := SuperReq,
+                     http_opts := HttpOpts,
+                     retry_opts := RetryOpts}) ->
     case authenticate(AuthReq, Credentials, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} -> ok;
         {ok, 200, Body}  -> {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials, HttpOpts, RetryOpts),
                                                  auth_result => success,
                                                  mountpoint  => mountpoint(Body, Credentials)}};
         {ok, Code, _Body} -> {stop, Credentials#{auth_result => Code}};
-        {error, Error}    -> ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [AuthReq, Error]),
+        {error, Error}    -> ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [AuthReq#http_request.url, Error]),
                              {stop, Credentials#{auth_result => Error}}
     end.
 

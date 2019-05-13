@@ -30,23 +30,36 @@
         , description/0
         ]).
 
+%%------------------------------------------------------------------------------
+%% ACL callbacks
+%%------------------------------------------------------------------------------
+
 check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;
-check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := #http_request{method = Method, url = Url, params = Params},
+check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := AclReq,
                                                     http_opts := HttpOpts,
                                                     retry_opts := RetryOpts}) ->
-    Params1 = feedvar(Params, Credentials#{access => access(PubSub), topic => Topic}),
-    case request(Method, Url, Params1, HttpOpts, RetryOpts) of
+    Credentials1 = Credentials#{access => access(PubSub), topic => Topic},
+    case check_acl_request(AclReq, Credentials1, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} -> ok;
-        {ok, 200, _Body}   -> {stop, allow};
-        {ok, _Code, _Body} -> {stop, deny};
-        {error, Error}     -> ?LOG(error, "[ACL http] check_acl url ~s Error: ~p", [Url, Error]),
-                              ok
+        {ok, 200, _Body}    -> {stop, allow};
+        {ok, _Code, _Body}  -> {stop, deny};
+        {error, Error}      ->
+            ?LOG(error, "[ACL http] check_acl url ~s Error: ~p", [AclReq#http_request.url, Error]),
+            ok
     end.
-
-access(subscribe) -> 1;
-access(publish)   -> 2.
 
 reload_acl(_State) -> ok.
 
 description() -> "ACL with HTTP API".
+
+%%------------------------------------------------------------------------------
+%% Interval functions
+%%------------------------------------------------------------------------------
+
+check_acl_request(#http_request{method = Method, url = Url, params = Params}, Credentials, HttpOpts, RetryOpts) ->
+    request(Method, Url, feedvar(Params, Credentials), HttpOpts, RetryOpts).
+
+access(subscribe) -> 1;
+access(publish)   -> 2.
+

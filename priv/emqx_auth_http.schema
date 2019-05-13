@@ -1,20 +1,21 @@
 %%-*- mode: erlang -*-
 %% emqx_auth_http config mapping
 
-
 {mapping, "auth.http.request.timeout", "emqx_auth_http.http_opts", [
-  {default, "5s"},
-  {datatype, {duration, ms}}
+  {default, 0},
+  {datatype, [integer, {duration, ms}]}
 ]}.
 
 {mapping, "auth.http.request.connect_timeout", "emqx_auth_http.http_opts", [
-  {default, "5s"},
-  {datatype, {duration, ms}}
+  {datatype, [integer, {duration, ms}]}
 ]}.
 
 {translation, "emqx_auth_http.http_opts", fun(Conf) ->
-  [{timeout, cuttlefish:conf_get("auth.http.request.timeout", Conf)},
-   {connect_timeout, cuttlefish:conf_get("auth.http.request.connect_timeout", Conf)}]
+  InfinityFun = fun(0) -> infinity;
+                   (Duration) -> Duration
+                end,
+  [{timeout, InfinityFun(cuttlefish:conf_get("auth.http.request.timeout", Conf))},
+   {connect_timeout, InfinityFun(cuttlefish:conf_get("auth.http.request.connect_timeout", Conf, undefined))}]
 end}.
 
 {mapping, "auth.http.request.retry_times", "emqx_auth_http.retry_opts", [
@@ -28,7 +29,7 @@ end}.
 ]}.
 
 {mapping, "auth.http.request.retry_backoff", "emqx_auth_http.retry_opts", [
-  {default, 0.75},
+  {default, 1.5},
   {datatype, float}
 ]}.
 
