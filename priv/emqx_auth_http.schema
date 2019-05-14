@@ -24,12 +24,12 @@ end}.
 ]}.
 
 {mapping, "auth.http.request.retry_interval", "emqx_auth_http.retry_opts", [
-  {default, "0.1s"},
+  {default, "1s"},
   {datatype, {duration, ms}}
 ]}.
 
 {mapping, "auth.http.request.retry_backoff", "emqx_auth_http.retry_opts", [
-  {default, 1.5},
+  {default, 2.0},
   {datatype, float}
 ]}.
 

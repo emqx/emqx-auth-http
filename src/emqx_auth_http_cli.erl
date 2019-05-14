@@ -32,12 +32,14 @@ request(post, Url, Params, HttpOpts, RetryOpts) ->
     reply(request_(post, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts)).
 
 request_(Method, Req, HTTPOpts, Opts, RetryOpts = #{times := Times,
-                                                    interval := Interval}) ->
-    %% Resend request, when TCP closed by remotely
+                                                    interval := Interval,
+                                                    backoff := BackOff}) ->
     case httpc:request(Method, Req, HTTPOpts, Opts) of
-        {error, socket_closed_remotely} when Times > 0 ->
+        {error, _Reason} when Times > 0 ->
             timer:sleep(Interval),
-            request_(Method, Req, HTTPOpts, Opts, backoff(RetryOpts));
+            RetryOpts1 = RetryOpts#{times := Times - 1,
+                                    interval := Interval * BackOff},
+            request_(Method, Req, HTTPOpts, Opts, RetryOpts1);
         Other -> Other
     end.
 
@@ -47,9 +49,6 @@ reply({ok, Code, Body}) ->
     {ok, Code, Body};
 reply({error, Error}) ->
     {error, Error}.
-
-backoff(Opts = #{times := Times, interval := Interval, backoff := BackOff}) ->
-    Opts#{times := Times - 1, interval := Interval * BackOff}.
 
 %% TODO: move this conversion to cuttlefish config and schema
 bin_kw(KeywordList) when is_list(KeywordList) ->
