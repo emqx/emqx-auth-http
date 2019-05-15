@@ -51,7 +51,7 @@ end_per_suite(_Config) ->
 
 
 set_special_configs(emqx) ->
-    application:set_env(emqx, allow_anonymous, false),
+    application:set_env(emqx, allow_anonymous, true),
     application:set_env(emqx, enable_acl_cache, false),
     LoadedPluginPath = filename:join(["test", "emqx_SUITE_data", "loaded_plugins"]),
     application:set_env(emqx, plugins_loaded_file,
@@ -97,15 +97,17 @@ t_check_auth(_) ->
     User2 = ?USER(<<"client2">>, <<"testuser2">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2982}, exteneral, undefined),
     User3 = ?USER(<<"client3">>, undefined, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2983}, exteneral, undefined),
 
-    {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User1#{password => <<"pass1">>}),
+    {ok, #{auth_result := success,
+           anonymous := false,
+           is_superuser := false}} = emqx_access_control:authenticate(User1#{password => <<"pass1">>}),
     {error, 404} = emqx_access_control:authenticate(User1#{password => <<"pass">>}),
-    {error, bad_username_or_password} = emqx_access_control:authenticate(User1#{password => <<>>}),
+    {error, 404} = emqx_access_control:authenticate(User1#{password => <<>>}),
 
     {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User2#{password => <<"pass2">>}),
-    {error, bad_username_or_password} = emqx_access_control:authenticate(User2#{password => <<>>}),
+    {error, 404} = emqx_access_control:authenticate(User2#{password => <<>>}),
     {error, 404} = emqx_access_control:authenticate(User2#{password => <<"errorpwd">>}),
 
-    {error, _} = emqx_access_control:authenticate(User3#{password => <<"pwd">>}).
+    {error, 404} = emqx_access_control:authenticate(User3#{password => <<"pwd">>}).
 
 t_sub_pub(_) ->
     ct:pal("start client"),
