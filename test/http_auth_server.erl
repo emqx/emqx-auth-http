@@ -1,6 +1,8 @@
 -module(http_auth_server).
 
--compile(export_all).
+-export([ start_http/0
+        , stop_http/0
+        ]).
 
 -define(SUPERUSER, [[{"username", "superuser"}, {"clientid", "superclient"}]]).
 
@@ -8,22 +10,26 @@
                {<<"clientid">>, <<"client1">>},
                {<<"access">>, <<"1">>},
                {<<"topic">>, <<"users/testuser/1">>},
-               {<<"ipaddr">>, <<"127.0.0.1">>}],
+               {<<"ipaddr">>, <<"127.0.0.1">>},
+               {<<"mountpoint">>, <<"undefined">>}],
               [{<<"username">>, <<"xyz">>},
                {<<"clientid">>, <<"client2">>},
                {<<"access">>, <<"2">>},
                {<<"topic">>, <<"a/b/c">>},
-               {<<"ipaddr">>, <<"192.168.1.3">>}],
+               {<<"ipaddr">>, <<"192.168.1.3">>},
+               {<<"mountpoint">>, <<"undefined">>}],
               [{<<"username">>, <<"testuser1">>},
                {<<"clientid">>, <<"client1">>},
                {<<"access">>, <<"2">>},
                {<<"topic">>, <<"topic">>},
-               {<<"ipaddr">>, <<"127.0.0.1">>}],
+               {<<"ipaddr">>, <<"127.0.0.1">>},
+               {<<"mountpoint">>, <<"undefined">>}],
               [{<<"username">>, <<"testuser2">>},
                {<<"clientid">>, <<"client2">>},
                {<<"access">>, <<"1">>},
                {<<"topic">>, <<"topic">>},
-               {<<"ipaddr">>, <<"127.0.0.1">>}]]).
+               {<<"ipaddr">>, <<"127.0.0.1">>},
+               {<<"mountpoint">>, <<"undefined">>}]]).
 
 -define(AUTH, [[{<<"clientid">>, <<"client1">>},
                 {<<"username">>, <<"testuser1">>},
@@ -32,57 +38,58 @@
                 {<<"username">>, <<"testuser2">>},
                 {<<"password">>, <<"pass2">>}]]).
 
-%%%%%%%start http listen%%%%%%%%%%%%%%%%%%%%%
+%%------------------------------------------------------------------------------
+%% REST Interface
+%%------------------------------------------------------------------------------
+
+-rest_api(#{ name   => auth
+           , method => 'GET'
+           , path   => "/mqtt/auth"
+           , func   => authenticate
+           , descr  => "Authenticate user access permission"
+           }).
+
+-rest_api(#{ name   => is_superuser
+           , method => 'GET'
+           , path   => "/mqtt/superuser"
+           , func   => is_superuser
+           , descr  => "Is super user"
+           }).
+
+-rest_api(#{ name   => acl
+           , method => 'GET'
+           , path   => "/mqtt/acl"
+           , func   => check_acl
+           , descr  => "Check acl"
+           }).
+
+-export([ authenticate/2
+        , is_superuser/2
+        , check_acl/2
+        ]).
+
+authenticate(_Binding, Params) ->
+    return(check(Params, ?AUTH)).
+
+is_superuser(_Binding, Params) ->
+    return(check(Params, ?SUPERUSER)).
+
+check_acl(_Binding, Params) ->
+    return(check(Params, ?ACL)).
+
+return(allow) -> {200, <<"allow">>};
+return(deny) -> {404, <<"deny">>}.
+
 start_http() ->
-    %process_flag(trap_exit, true),
-    io:format("start http~n", []),
-    {ok, _} = application:ensure_all_started(cowboy),
-    Dispatch = cowboy_router:compile([
-        {'_', [
-              {"/", ?MODULE, []}
-            , {"/mqtt/acl", ?MODULE, []}
-            , {"/mqtt/auth", ?MODULE, []}
-        ]}
-    ]),
-    {ok, _Pid} = cowboy:start_clear(http, [{port, 8991}], #{
-        env => #{dispatch => Dispatch}
-    }).
+    application:ensure_all_started(minirest),
+    Handlers = [{"/", minirest:handler(#{modules => [?MODULE]})}],
+    Dispatch = [{"/[...]", minirest, Handlers}],
+    minirest:start_http(http_auth_server, [{port, 8991}], Dispatch).
 
 stop_http() ->
-    cowboy:stop_listener(http).
+    minirest:stop_http(http_auth_server).
 
-init(Req, Opts) ->
-    io:format("init Req: ~p~n", [Req]),
-    Req1 = handle_request(Req),
-    {ok, Req1, Opts}.
-
-handle_request(Req) ->
-    Method =cowboy_req:method(Req),
-    Params =
-        case Method of
-            <<"GET">> -> cowboy_req:parse_qs(Req);
-            <<"POST">> ->
-                {ok, PostVals, _Req2} = cowboy_req:read_urlencoded_body(Req),
-                PostVals
-        end,
-
-    AllowDeny = handle_request(cowboy_req:path(Req),
-                               Params),
-    io:format("Method: ~p, Param: ~p, Result: ~p ~n", [Method, Params, AllowDeny]),
-    reply(Req, AllowDeny).
-
-handle_request(<<"/mqtt/superuser">>, Params) ->
-    check(Params, ?SUPERUSER);
-handle_request(<<"/mqtt/acl">>, Params) ->
-    check(Params, ?ACL);
-handle_request(<<"/mqtt/auth">>, Params) ->
-    check(Params, ?AUTH).
-
-reply(Req, allow) ->
-    cowboy_req:reply(200, #{<<"content-type">> => <<"text/plain">>}, <<"hello">>, Req);
-reply(Req, deny) ->
-    cowboy_req:reply(404, #{<<"content-type">> => <<"text/plain">>}, <<"deny">>, Req).
-
+-spec check(HttpReqParams :: list(), DefinedConf :: list()) -> allow | deny.
 check(_Params, []) ->
     %ct:pal("check auth_result: deny~n"),
     deny;
@@ -106,3 +113,4 @@ match_config([Param|T], ConfigColumn) ->
         false ->
            not_match
     end.
+

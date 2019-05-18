@@ -24,107 +24,92 @@
 
 -define(APP, emqx_auth_http).
 
+-define(USER(ClientId, Username, Sockname, Peername, Zone),
+        #{client_id => ClientId, username => Username, sockname => Sockname, peername => Peername, zone => Zone}).
+
+-define(USER(ClientId, Username, Sockname, Peername, Zone, Mountpoint),
+        #{client_id => ClientId, username => Username, sockname => Sockname, peername => Peername, zone => Zone, mountpoint => Mountpoint}).
 all() ->
     [{group, emqx_auth_http}].
 
 groups() ->
     [{emqx_auth_http, [sequence],
-    [check_acl,
-     check_auth,
-     sub_pub,
-     %server_config,
-     comment_config
-    ]}].
+      [ t_check_acl
+      , t_check_auth
+      , t_sub_pub
+      , t_comment_config]}
+    ].
 
 init_per_suite(Config) ->
     http_auth_server:start_http(),
-    [start_apps(App, {SchemaFile, ConfigFile}) ||
-      {App, SchemaFile, ConfigFile}
-        <- [{emqx, local_path("deps/emqx/priv/emqx.schema"),
-                   local_path("deps/emqx/etc/emqx.conf")},
-            {emqx_auth_http, local_path("priv/emqx_auth_http.schema"),
-                             local_path("etc/emqx_auth_http.conf")}]],
+    emqx_ct_helpers:start_apps([emqx_auth_http], fun set_special_configs/1),
     Config.
-
-get_base_dir() ->
-    {file, Here} = code:is_loaded(?MODULE),
-    filename:dirname(filename:dirname(Here)).
-
-local_path(RelativePath) ->
-    filename:join([get_base_dir(), RelativePath]).
-
-start_apps(App, {SchemaFile, ConfigFile}) ->
-    read_schema_configs(App, {SchemaFile, ConfigFile}),
-    set_special_configs(App),
-    application:ensure_all_started(App).
-
-read_schema_configs(App, {SchemaFile, ConfigFile}) ->
-    ct:pal("Read configs - SchemaFile: ~p, ConfigFile: ~p", [SchemaFile, ConfigFile]),
-    Schema = cuttlefish_schema:files([SchemaFile]),
-    Conf = conf_parse:file(ConfigFile),
-    NewConfig = cuttlefish_generator:map(Schema, Conf),
-    Vals = proplists:get_value(App, NewConfig, []),
-    [application:set_env(App, Par, Value) || {Par, Value} <- Vals].
-
-set_special_configs(emqx) ->
-    application:set_env(emqx, allow_anonymous, false),
-    application:set_env(emqx, enable_acl_cache, false),
-    application:set_env(emqx, plugins_loaded_file,
-                        local_path("deps/emqx/test/emqx_SUITE_data/loaded_plugins"));
-set_special_configs(_App) ->
-    ok.
 
 end_per_suite(_Config) ->
     http_auth_server:stop_http(),
-    [application:stop(App) || App <- [emqx_auth_http, emqx]].
+    emqx_ct_helpers:stop_apps([emqx_auth_http, emqx]).
 
-init_per_testcase(_) ->
+
+set_special_configs(emqx) ->
+    application:set_env(emqx, allow_anonymous, true),
+    application:set_env(emqx, enable_acl_cache, false),
+    LoadedPluginPath = filename:join(["test", "emqx_SUITE_data", "loaded_plugins"]),
+    application:set_env(emqx, plugins_loaded_file,
+                        emqx_ct_helpers:deps_path(emqx, LoadedPluginPath));
+
+set_special_configs(emqx_auth_http) ->
+    AuthReq = maps:from_list(application:get_env(emqx_auth_http, auth_req, [])),
+    SuprReq = maps:from_list(application:get_env(emqx_auth_http, super_req, [])),
+    application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq#{method := get})),
+    application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq#{method := get}));
+set_special_configs(_App) ->
     ok.
 
-end_per_testcase(_) ->
-    ok.
+%%------------------------------------------------------------------------------
+%% Testcases
+%%------------------------------------------------------------------------------
 
-check_acl(_) ->
+t_check_acl(_) ->
     %ct:pal("all configs: ~p ", [application:get_all_env(?APP)]),
     %ct:pal("emqx all configs: ~p ", [application:get_all_env(emqx)]),
-    SuperUser = #{client_id => <<"superclient">>, username => <<"superuser">>,
-                  peername => {{127,0,0,1}, 2982}, zone => external},
+    SuperUser = ?USER(<<"superclient">>, <<"superuser">>, {{127,0,0,1}, 1883}, {{127, 0, 0, 1}, 2982}, external),
     deny = emqx_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
 
-    User1 = #{client_id => <<"client1">>, username => <<"testuser">>, peername => {{127,0,0,1}, 2981}, zone => external},
-    UnIpUser1 = #{client_id => <<"client1">>, username => <<"testuser">>, peername => {{192,168,0,4}, 2981}, zone => external},
-    UnClientIdUser1 = #{client_id => <<"unkonwc">>, username => <<"testuser">>, peername => {{127,0,0,1}, 2981}, zone => external},
-    UnnameUser1= #{client_id => <<"client1">>, username => <<"unuser">>, peername => {{127,0,0,1}, 2981}, zone => external},
+    User1 = ?USER(<<"client1">>, <<"testuser">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2981}, external),
+    UnIpUser1 = ?USER(<<"client1">>, <<"testuser">>, {{127,0,0,1}, 1883}, {{192,168,0,4}, 2981}, external),
+    UnClientIdUser1 = ?USER(<<"unkonwc">>, <<"testuser">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2981}, external),
+    UnnameUser1= ?USER(<<"client1">>, <<"unuser">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2981}, external),
     allow = emqx_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(User1, publish, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(UnIpUser1, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(UnClientIdUser1, subscribe, <<"users/testuser/1">>),
     deny  = emqx_access_control:check_acl(UnnameUser1, subscribe, <<"$SYS/testuser/1">>),
 
-    User2 = #{client_id => <<"client2">>, username => <<"xyz">>, peername => {{127,0,0,1}, 2982}, zone => external},
-    UserC = #{client_id => <<"client2">>, username => <<"xyz">>, peername => {{192,168,1,3}, 2983}, zone => external},
+    User2 = ?USER(<<"client2">>, <<"xyz">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2982}, external),
+    UserC = ?USER(<<"client2">>, <<"xyz">>, {{127,0,0,1}, 1883}, {{192,168,1,3}, 2983}, external),
     allow = emqx_access_control:check_acl(UserC, publish, <<"a/b/c">>),
     deny = emqx_access_control:check_acl(User2, publish, <<"a/b/c">>),
     deny  = emqx_access_control:check_acl(User2, subscribe, <<"$SYS/testuser/1">>).
 
-check_auth(_) ->
-%    {ok, Default} = application:get_env(emqx, allow_anonymous),
-    User1 = #{client_id => <<"client1">>, username => <<"testuser1">>, peername => {{127,0,0,1}, 2981}},
-    User2 = #{client_id => <<"client2">>, username => <<"testuser2">>, peername => {{127,0,0,1}, 2982}},
-    User3 = #{client_id => <<"client3">>, username => undefined, peername => {{127,0,0,1}, 2983}},
+t_check_auth(_) ->
+    User1 = ?USER(<<"client1">>, <<"testuser1">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2981}, external, undefined),
+    User2 = ?USER(<<"client2">>, <<"testuser2">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2982}, exteneral, undefined),
+    User3 = ?USER(<<"client3">>, undefined, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2983}, exteneral, undefined),
 
-    {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User1#{password => <<"pass1">>}),
+    {ok, #{auth_result := success,
+           anonymous := false,
+           is_superuser := false}} = emqx_access_control:authenticate(User1#{password => <<"pass1">>}),
     {error, 404} = emqx_access_control:authenticate(User1#{password => <<"pass">>}),
-    {error, bad_username_or_password} = emqx_access_control:authenticate(User1#{password => <<>>}),
+    {error, 404} = emqx_access_control:authenticate(User1#{password => <<>>}),
 
     {ok, #{is_superuser := false}} = emqx_access_control:authenticate(User2#{password => <<"pass2">>}),
-    {error, bad_username_or_password} = emqx_access_control:authenticate(User2#{password => <<>>}),
+    {error, 404} = emqx_access_control:authenticate(User2#{password => <<>>}),
     {error, 404} = emqx_access_control:authenticate(User2#{password => <<"errorpwd">>}),
 
-    {error, _} = emqx_access_control:authenticate(User3#{password => <<"pwd">>}).
+    {error, 404} = emqx_access_control:authenticate(User3#{password => <<"pwd">>}).
 
-sub_pub(_) ->
+t_sub_pub(_) ->
     ct:pal("start client"),
     {ok, T1} = emqx_client:start_link([{host, "localhost"},
                                        {client_id, <<"client1">>},
@@ -146,45 +131,7 @@ sub_pub(_) ->
     emqx_client:disconnect(T1),
     emqx_client:disconnect(T2).
 
-server_config(_) ->
-    Auth = [{url,"http://127.0.0.1:8991/mqtt/auth1"},
-            {method,get},
-            {params,[{"clientid","%c"},
-                     {"username","%u"}
-                     ]}],
-    Acl = [{url,"http://127.0.0.1:8991/mqtt/acl"},
-                           {method,post},
-                           {params,[{"access","%A"},
-                                    {"username","%u"},
-                                    {"clientid","%c"},
-                                    {"ipaddr","%a"}
-                                    ]}],
-
-    Super = [{url,"http://127.0.0.1:8991/mqtt/superuser1"},
-             {method,get},
-             {params,[{"clientid","%c"}]}],
-    SetConfigKeys = ["auth_req=http://127.0.0.1:8991/mqtt/auth1",
-                     "auth_req.method=get",
-                     "auth_req.params=clientid=%c,username=%u",
-                     "super_req=http://127.0.0.1:8991/mqtt/superuser1",
-                     "super_req.method=get",
-                     "super_req.params=clientid=%c",
-                     "acl_req=http://127.0.0.1:8090/mqtt/acl",
-                     "acl_req.method=post",
-                     "acl_req.params=access=%A,username=%u,clientid=%c,ipaddr=%a"],
-    lists:foreach(fun set_cmd/1, SetConfigKeys),
-    {ok, Auth_} = application:get_env(?APP, auth_req),
-    {ok, Super_} = application:get_env(?APP, super_req),
-    {ok, Acl_} = application:get_env(?APP, acl_req),
-
-    ?assertEqual(lists:sort(Auth), lists:sort(Auth_)),
-    ?assertEqual(lists:sort(Acl), lists:sort(Acl_)),
-    ?assertEqual(lists:sort(Super), lists:sort(Super_)).
-
-set_cmd(Key) ->
-    emqx_cli_config:run(["config", "set", string:join(["auth.http", Key], "."), "--app=emqx_auth_http"]).
-
-comment_config(_) ->
+t_comment_config(_) ->
     AuthCount = length(emqx_hooks:lookup('client.authenticate')),
     AclCount = length(emqx_hooks:lookup('client.check_acl')),
     application:stop(?APP),
@@ -193,3 +140,4 @@ comment_config(_) ->
     ?assertEqual([], emqx_hooks:lookup('client.authenticate')),
     ?assertEqual(AuthCount - 1, length(emqx_hooks:lookup('client.authenticate'))),
     ?assertEqual(AclCount - 1, length(emqx_hooks:lookup('client.check_acl'))).
+
