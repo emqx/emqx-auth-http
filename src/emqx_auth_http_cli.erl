@@ -14,9 +14,7 @@
 
 -module(emqx_auth_http_cli).
 
--include_lib("emqx/include/emqx.hrl").
-
--export([ request/3
+-export([ request/5
         , feedvar/2
         , feedvar/3
         ]).
@@ -25,20 +23,23 @@
 %% HTTP Request
 %%--------------------------------------------------------------------
 
-request(get, Url, Params) ->
+request(get, Url, Params, HttpOpts, RetryOpts) ->
     Req = {Url ++ "?" ++ cow_qs:qs(bin_kw(Params)), []},
-    reply(request_(get, Req, [{autoredirect, true}], [], 0));
+    reply(request_(get, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts));
 
-request(post, Url, Params) ->
+request(post, Url, Params, HttpOpts, RetryOpts) ->
     Req = {Url, [], "application/x-www-form-urlencoded", cow_qs:qs(bin_kw(Params))},
-    reply(request_(post, Req, [{autoredirect, true}], [], 0)).
+    reply(request_(post, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts)).
 
-request_(Method, Req, HTTPOpts, Opts, Times) ->
-    %% Resend request, when TCP closed by remotely
+request_(Method, Req, HTTPOpts, Opts, RetryOpts = #{times := Times,
+                                                    interval := Interval,
+                                                    backoff := BackOff}) ->
     case httpc:request(Method, Req, HTTPOpts, Opts) of
-        {error, socket_closed_remotely} when Times < 3 ->
-            timer:sleep(trunc(math:pow(10, Times))),
-            request_(Method, Req, HTTPOpts, Opts, Times+1);
+        {error, _Reason} when Times > 0 ->
+            timer:sleep(Interval),
+            RetryOpts1 = RetryOpts#{times := Times - 1,
+                                    interval := Interval * BackOff},
+            request_(Method, Req, HTTPOpts, Opts, RetryOpts1);
         Other -> Other
     end.
 
@@ -68,12 +69,20 @@ bin(Binary) when is_binary(Binary) ->
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, Credentials = #{username := Username, client_id := ClientId, peername := {IpAddr, _}}) ->
+feedvar(Params, Credentials = #{ username := Username
+                               , client_id := ClientId
+                               , sockname := {_, AcptPort}
+                               , peername := {IpAddr, _}}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
+                 ({Param, "%l"}) -> {Param, AcptPort};
                  ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
+                 ({Param, "%P"}) -> {Param, maps:get(password, Credentials, undefined)};
                  ({Param, "%cn"}) -> {Param, maps:get(cn, Credentials, undefined)};
                  ({Param, "%dn"}) -> {Param, maps:get(dn, Credentials, undefined)};
+                 ({Param, "%A"}) -> {Param, maps:get(access, Credentials, undefined)};
+                 ({Param, "%t"}) -> {Param, maps:get(topic, Credentials, undefined)};
+                 ({Param, "%m"}) -> {Param, maps:get(mountpoint, Credentials, undefined)};
                  ({Param, Var})  -> {Param, Var}
               end, Params).
 

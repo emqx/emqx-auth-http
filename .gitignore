@@ -20,3 +20,5 @@ erlang.mk
 _build/
 rebar.lock
 rebar3.crashdump
+etc/emqx_auth_http.conf.rendered
+.rebar3/

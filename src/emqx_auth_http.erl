@@ -20,9 +20,8 @@
 -include_lib("emqx/include/logger.hrl").
 
 -import(emqx_auth_http_cli,
-        [ request/3
+        [ request/5
         , feedvar/2
-        , feedvar/3
         ]).
 
 %% Callbacks
@@ -30,40 +29,38 @@
         , description/0
         ]).
 
--define(UNDEFINED(S), (S =:= undefined orelse S =:= <<>>)).
-
-check(Credentials = #{username := Username, password := Password}, _Config)
-  when ?UNDEFINED(Username); ?UNDEFINED(Password) ->
-    {ok, Credentials#{auth_result => bad_username_or_password}};
-
-check(Credentials = #{password := Password},
-      #{auth_req := #http_request{method = Method, url = Url, params = Params},
-        super_req := SuperReq}) ->
-    Params1 = feedvar(feedvar(Params, Credentials), "%P", Password),
-    case request(Method, Url, Params1) of
+check(Credentials, #{auth_req := AuthReq,
+                     super_req := SuperReq,
+                     http_opts := HttpOpts,
+                     retry_opts := RetryOpts}) ->
+    case authenticate(AuthReq, Credentials, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} -> ok;
-        {ok, 200, Body}  -> {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials),
+        {ok, 200, Body}  -> {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials, HttpOpts, RetryOpts),
                                                  auth_result => success,
+                                                 anonymous => false,
                                                  mountpoint  => mountpoint(Body, Credentials)}};
-        {ok, Code, _Body} -> {stop, Credentials#{auth_result => Code}};
-        {error, Error}    -> ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [Url, Error]),
-                             {stop, Credentials#{auth_result => Error}}
+        {ok, Code, _Body} -> {stop, Credentials#{auth_result => Code, anonymous => false}};
+        {error, Error}    -> ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [AuthReq#http_request.url, Error]),
+                             {stop, Credentials#{auth_result => Error, anonymous => false}}
     end.
 
 description() -> "Authentication by HTTP API".
 
 %%--------------------------------------------------------------------
-%% Is Superuser
+%% Requests
 %%--------------------------------------------------------------------
 
--spec(is_superuser(undefined | #http_request{}, emqx_types:credetials()) -> boolean()).
-is_superuser(undefined, _Credetials) ->
+authenticate(#http_request{method = Method, url = Url, params = Params}, Credentials, HttpOpts, RetryOpts) ->
+   request(Method, Url, feedvar(Params, Credentials), HttpOpts, RetryOpts).
+
+-spec(is_superuser(undefined | #http_request{}, emqx_types:credetials(), list(), list()) -> boolean()).
+is_superuser(undefined, _Credetials, _HttpOpts, _RetryOpts) ->
     false;
-is_superuser(#http_request{method = Method, url = Url, params = Params}, Credetials) ->
-    case request(Method, Url, feedvar(Params, Credetials)) of
+is_superuser(#http_request{method = Method, url = Url, params = Params}, Credetials, HttpOpts, RetryOpts) ->
+    case request(Method, Url, feedvar(Params, Credetials), HttpOpts, RetryOpts) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
-        {error, Error}     -> logger:error("HTTP ~s Error: ~p", [Url, Error]),
+        {error, Error}     -> ?LOG(error, "[Auth HTTP] is_superuser ~s Error: ~p", [Url, Error]),
                               false
     end.
 
