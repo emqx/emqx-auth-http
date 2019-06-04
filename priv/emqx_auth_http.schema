@@ -10,12 +10,39 @@
   {datatype, [integer, {duration, ms}]}
 ]}.
 
+{mapping, "auth.http.ssl.cacertfile", "emqx_auth_http.http_opts", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.ssl.certfile", "emqx_auth_http.http_opts", [
+  {datatype, string}
+]}.
+
+{mapping, "auth.http.ssl.keyfile", "emqx_auth_http.http_opts", [
+  {datatype, string}
+]}.
+
 {translation, "emqx_auth_http.http_opts", fun(Conf) ->
+  Filter = fun(L) -> [{K, V} || {K, V} <- L, V =/= undefined] end,
   InfinityFun = fun(0) -> infinity;
                    (Duration) -> Duration
                 end,
-  [{timeout, InfinityFun(cuttlefish:conf_get("auth.http.request.timeout", Conf))},
-   {connect_timeout, InfinityFun(cuttlefish:conf_get("auth.http.request.connect_timeout", Conf, undefined))}]
+  SslOpts = Filter([{cacertfile, cuttlefish:conf_get("auth.http.ssl.cacertfile", Conf, undefined)},
+                    {certfile, cuttlefish:conf_get("auth.http.ssl.certfile", Conf, undefined)},
+                    {keyfile, cuttlefish:conf_get("auth.http.ssl.keyfile", Conf, undefined)}]),
+  Opts = [{timeout, InfinityFun(cuttlefish:conf_get("auth.http.request.timeout", Conf))},
+          {connect_timeout, InfinityFun(cuttlefish:conf_get("auth.http.request.connect_timeout", Conf, undefined))}],
+  case SslOpts of
+      [] -> Filter(Opts);
+      _  ->
+          TlsVers = ['tlsv1.2','tlsv1.1',tlsv1],
+          DefaultOpts = [{versions, TlsVers},
+                         {ciphers, lists:foldl(
+                                       fun(TlsVer, Ciphers) ->
+                                           Ciphers ++ ssl:cipher_suites(all, TlsVer)
+                                       end, [], TlsVers)}],
+          Filter([{ssl, DefaultOpts ++ SslOpts} | Opts])
+  end
 end}.
 
 {mapping, "auth.http.request.retry_times", "emqx_auth_http.retry_opts", [
