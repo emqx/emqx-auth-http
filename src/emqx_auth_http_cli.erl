@@ -36,7 +36,7 @@ request_(Method, Req, HTTPOpts, Opts, RetryOpts = #{times := Times,
                                                     backoff := BackOff}) ->
     case httpc:request(Method, Req, HTTPOpts, Opts) of
         {error, _Reason} when Times > 0 ->
-            timer:sleep(Interval),
+            timer:sleep(trunc(Interval)),
             RetryOpts1 = RetryOpts#{times := Times - 1,
                                     interval := Interval * BackOff},
             request_(Method, Req, HTTPOpts, Opts, RetryOpts1);
