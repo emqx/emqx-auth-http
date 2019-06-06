@@ -2,6 +2,8 @@
 
 -export([ start_http/0
         , stop_http/0
+        , start_https/0
+        , stop_https/0
         ]).
 
 -define(SUPERUSER, [[{"username", "superuser"}, {"clientid", "superclient"}]]).
@@ -86,8 +88,27 @@ start_http() ->
     Dispatch = [{"/[...]", minirest, Handlers}],
     minirest:start_http(http_auth_server, [{port, 8991}], Dispatch).
 
+start_https() ->
+    application:ensure_all_started(minirest),
+    Handlers = [{"/", minirest:handler(#{modules => [?MODULE]})}],
+    Dispatch = [{"/[...]", minirest, Handlers}],
+    minirest:start_https(https_auth_server, [{port, 8991} | certopts()], Dispatch).
+
+%% @private
+certopts() ->
+    Certfile = filename:join(["etc", "certs", "cert.pem"]),
+    Keyfile = filename:join(["etc", "certs", "key.pem"]),
+    CaCert = filename:join(["etc", "certs", "cacert.pem"]),
+    [{verify, verify_peer},
+     {certfile, emqx_ct_helpers:deps_path(emqx, Certfile)},
+     {keyfile, emqx_ct_helpers:deps_path(emqx, Keyfile)},
+     {cacertfile, emqx_ct_helpers:deps_path(emqx, CaCert)}] ++ emqx_ct_helpers:client_ssl().
+
 stop_http() ->
     minirest:stop_http(http_auth_server).
+
+stop_https() ->
+    minirest:stop_http(https_auth_server).
 
 -spec check(HttpReqParams :: list(), DefinedConf :: list()) -> allow | deny.
 check(_Params, []) ->

@@ -30,48 +30,84 @@
 -define(USER(ClientId, Username, Sockname, Peername, Zone, Mountpoint),
         #{client_id => ClientId, username => Username, sockname => Sockname, peername => Peername, zone => Zone, mountpoint => Mountpoint}).
 all() ->
-    [{group, emqx_auth_http}].
+    [{group, http},
+     {group, https}].
 
 groups() ->
-    [{emqx_auth_http, [sequence],
+    [{http, [sequence],
       [ t_check_acl
       , t_check_auth
       , t_sub_pub
-      , t_comment_config]}
+      , t_comment_config]},
+     {https, [sequence],
+      [ t_check_acl
+      , t_check_auth
+      , t_sub_pub]}
     ].
 
-init_per_suite(Config) ->
+init_per_group(http, Config) ->
     http_auth_server:start_http(),
-    emqx_ct_helpers:start_apps([emqx_auth_http], fun set_special_configs/1),
+    emqx_ct_helpers:start_apps([emqx_auth_http], fun http_speical_configs/1),
+    Config;
+init_per_group(https, Config) ->
+    http_auth_server:start_https(),
+    emqx_ct_helpers:start_apps([emqx_auth_http], fun https_special_configs/1),
     Config.
 
-end_per_suite(_Config) ->
+end_per_group(http, _Config) ->
     http_auth_server:stop_http(),
+    emqx_ct_helpers:stop_apps([emqx_auth_http, emqx]);
+end_per_group(https, _Config) ->
+    http_auth_server:stop_https(),
     emqx_ct_helpers:stop_apps([emqx_auth_http, emqx]).
 
+http_speical_configs(App) ->
+    set_special_configs(App, http).
 
-set_special_configs(emqx) ->
+https_special_configs(App) ->
+    set_special_configs(App, https).
+
+set_special_configs(emqx, _Grp) ->
     application:set_env(emqx, allow_anonymous, true),
     application:set_env(emqx, enable_acl_cache, false),
     LoadedPluginPath = filename:join(["test", "emqx_SUITE_data", "loaded_plugins"]),
     application:set_env(emqx, plugins_loaded_file,
                         emqx_ct_helpers:deps_path(emqx, LoadedPluginPath));
 
-set_special_configs(emqx_auth_http) ->
+set_special_configs(emqx_auth_http, Grp) ->
     AuthReq = maps:from_list(application:get_env(emqx_auth_http, auth_req, [])),
     SuprReq = maps:from_list(application:get_env(emqx_auth_http, super_req, [])),
-    application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq#{method := get})),
-    application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq#{method := get}));
-set_special_configs(_App) ->
+    AclReq  = maps:from_list(application:get_env(emqx_auth_http, acl_req, [])),
+    {AuthReq1, SuprReq1, AclReq1} =
+        case Grp of
+            http ->
+                {AuthReq#{method := get},
+                 SuprReq#{method := get},
+                 AclReq #{method := get}};
+            https ->
+                set_https_client_opts(),
+                {AuthReq#{method := get, url := "https://127.0.0.1:8991/mqtt/auth"},
+                 SuprReq#{method := get, url := "https://127.0.0.1:8991/mqtt/superuser"},
+                 AclReq #{method := get, url := "https://127.0.0.1:8991/mqtt/acl"}}
+        end,
+    application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq1)),
+    application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq1)),
+    application:set_env(emqx_auth_http, acl_req, maps:to_list(AclReq1));
+
+set_special_configs(_App, _Grp) ->
     ok.
+
+%% @private
+set_https_client_opts() ->
+    HttpOpts = maps:from_list(application:get_env(emqx_auth_http, http_opts, [])),
+    HttpOpts1 = HttpOpts#{ssl => emqx_ct_helpers:client_ssl_twoway()},
+    application:set_env(emqx_auth_http, http_opts, maps:to_list(HttpOpts1)).
 
 %%------------------------------------------------------------------------------
 %% Testcases
 %%------------------------------------------------------------------------------
 
 t_check_acl(_) ->
-    %ct:pal("all configs: ~p ", [application:get_all_env(?APP)]),
-    %ct:pal("emqx all configs: ~p ", [application:get_all_env(emqx)]),
     SuperUser = ?USER(<<"superclient">>, <<"superuser">>, {{127,0,0,1}, 1883}, {{127, 0, 0, 1}, 2982}, external),
     deny = emqx_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
