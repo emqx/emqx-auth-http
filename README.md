@@ -23,7 +23,10 @@ File: etc/emqx_auth_http.conf
 ##  - %u: username
 ##  - %c: clientid
 ##  - %a: ipaddress
+##  - %l: accept port
 ##  - %P: password
+##  - %C: common name of client TLS cert
+##  - %d: subject of client TLS cert
 ##
 ## Value: URL
 auth.http.auth_req = http://127.0.0.1:8080/mqtt/auth
@@ -39,6 +42,10 @@ auth.http.auth_req.params = clientid=%c,username=%u,password=%P
 ##  - %u: username
 ##  - %c: clientid
 ##  - %a: ipaddress
+##  - %l: accept port
+##  - %P: password
+##  - %C: common name of client TLS cert
+##  - %d: subject of client TLS cert
 ##
 ## Value: URL
 auth.http.super_req = http://127.0.0.1:8080/mqtt/superuser
@@ -55,6 +62,8 @@ auth.http.super_req.params = clientid=%c,username=%u
 ##  - %u: username
 ##  - %c: clientid
 ##  - %a: ipaddress
+##  - %l: accept port
+##  - %m: mountpoint
 ##  - %t: topic
 ##
 ## Value: URL
