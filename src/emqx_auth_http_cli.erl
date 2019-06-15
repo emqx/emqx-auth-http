@@ -78,8 +78,8 @@ feedvar(Params, Credentials = #{ username := Username
                  ({Param, "%l"}) -> {Param, AcptPort};
                  ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
                  ({Param, "%P"}) -> {Param, maps:get(password, Credentials, undefined)};
-                 ({Param, "%cn"}) -> {Param, maps:get(cn, Credentials, undefined)};
-                 ({Param, "%dn"}) -> {Param, maps:get(dn, Credentials, undefined)};
+                 ({Param, "%C"}) -> {Param, maps:get(cn, Credentials, undefined)};
+                 ({Param, "%d"}) -> {Param, maps:get(dn, Credentials, undefined)};
                  ({Param, "%A"}) -> {Param, maps:get(access, Credentials, undefined)};
                  ({Param, "%t"}) -> {Param, maps:get(topic, Credentials, undefined)};
                  ({Param, "%m"}) -> {Param, maps:get(mountpoint, Credentials, undefined)};
