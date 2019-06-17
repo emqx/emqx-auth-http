@@ -25,18 +25,29 @@
         ]).
 
 %% ACL callbacks
--export([ check_acl/5
+-export([ register_metrics/0
+        , check_acl/5
         , reload_acl/1
         , description/0
         ]).
+
+register_metrics() ->
+    [emqx_metrics:new(MetricName) || MetricName <- ['acl.http.allow', 'acl.http.deny', 'acl.http.ignore']].
 
 %%------------------------------------------------------------------------------
 %% ACL callbacks
 %%------------------------------------------------------------------------------
 
-check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
+check_acl(Credentials, PubSub, Topic, AclResult, State) ->
+    case do_check_acl(Credentials, PubSub, Topic, AclResult, State) of
+        ok -> emqx_metrics:inc('acl.http.ignore'), ok;
+        {stop, allow} -> emqx_metrics:inc('acl.http.allow'), {stop, allow};
+        {stop, deny} -> emqx_metrics:inc('acl.http.deny'), {stop, deny}
+    end.
+
+do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;
-check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := AclReq,
+do_check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := AclReq,
                                                     http_opts := HttpOpts,
                                                     retry_opts := RetryOpts}) ->
     Credentials1 = Credentials#{access => access(PubSub), topic => Topic},
@@ -45,7 +56,7 @@ check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := AclReq,
         {ok, 200, _Body}    -> {stop, allow};
         {ok, _Code, _Body}  -> {stop, deny};
         {error, Error}      ->
-            ?LOG(error, "[ACL http] check_acl url ~s Error: ~p", [AclReq#http_request.url, Error]),
+            ?LOG(error, "[ACL http] do_check_acl url ~s Error: ~p", [AclReq#http_request.url, Error]),
             ok
     end.
 

@@ -37,6 +37,7 @@ start(_StartType, _StartArgs) ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 load_auth_hook(AuthReq) ->
+    emqx_auth_http:register_metrics(),
     SuperReq = r(application:get_env(?APP, super_req, undefined)),
     HttpOpts = application:get_env(?APP, http_opts, []),
     RetryOpts = application:get_env(?APP, retry_opts, []),
@@ -47,6 +48,7 @@ load_auth_hook(AuthReq) ->
     emqx:hook('client.authenticate', fun emqx_auth_http:check/2, [Params]).
 
 load_acl_hook(AclReq) ->
+    emqx_acl_http:register_metrics(),
     HttpOpts = application:get_env(?APP, http_opts, []),
     RetryOpts = application:get_env(?APP, retry_opts, []),
     Params = #{acl_req => AclReq,
