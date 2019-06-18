@@ -48,8 +48,8 @@ check_acl(Credentials, PubSub, Topic, AclResult, State) ->
 do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;
 do_check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := AclReq,
-                                                    http_opts := HttpOpts,
-                                                    retry_opts := RetryOpts}) ->
+                                                       http_opts := HttpOpts,
+                                                       retry_opts := RetryOpts}) ->
     Credentials1 = Credentials#{access => access(PubSub), topic => Topic},
     case check_acl_request(AclReq, Credentials1, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} -> ok;
