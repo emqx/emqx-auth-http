@@ -31,7 +31,7 @@
         ]).
 
 register_metrics() ->
-    [emqx_metrics:new(MetricName) || MetricName <- ['auth.http.succeed', 'auth.http.fail', 'auth.http.ignore']].
+    [emqx_metrics:new(MetricName) || MetricName <- ['auth.http.success', 'auth.http.failure', 'auth.http.ignore']].
 
 check(Credentials, #{auth_req := AuthReq,
                      super_req := SuperReq,
@@ -41,17 +41,17 @@ check(Credentials, #{auth_req := AuthReq,
         {ok, 200, "ignore"} ->
             emqx_metrics:inc('auth.http.ignore'), ok;
         {ok, 200, Body}  ->
-            emqx_metrics:inc('auth.http.succeed'),
+            emqx_metrics:inc('auth.http.success'),
             {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials, HttpOpts, RetryOpts),
                                 auth_result => success,
                                 anonymous => false,
                                 mountpoint  => mountpoint(Body, Credentials)}};
         {ok, Code, _Body} ->
-            emqx_metrics:inc('auth.http.fail'),
+            emqx_metrics:inc('auth.http.failure'),
             {stop, Credentials#{auth_result => Code, anonymous => false}};
         {error, Error} ->
             ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [AuthReq#http_request.url, Error]),
-            emqx_metrics:inc('auth.http.fail'),
+            emqx_metrics:inc('auth.http.failure'),
             {stop, Credentials#{auth_result => Error, anonymous => false}}
     end.
 
