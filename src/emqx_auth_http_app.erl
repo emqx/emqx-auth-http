@@ -17,7 +17,7 @@
 -behaviour(application).
 -behaviour(supervisor).
 
--emqx_plugin(?MODULE).
+-emqx_plugin(auth).
 
 -include("emqx_auth_http.hrl").
 
