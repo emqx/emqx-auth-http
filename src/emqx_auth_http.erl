@@ -25,23 +25,34 @@
         ]).
 
 %% Callbacks
--export([ check/2
+-export([ register_metrics/0
+        , check/2
         , description/0
         ]).
+
+register_metrics() ->
+    [emqx_metrics:new(MetricName) || MetricName <- ['auth.http.success', 'auth.http.failure', 'auth.http.ignore']].
 
 check(Credentials, #{auth_req := AuthReq,
                      super_req := SuperReq,
                      http_opts := HttpOpts,
                      retry_opts := RetryOpts}) ->
     case authenticate(AuthReq, Credentials, HttpOpts, RetryOpts) of
-        {ok, 200, "ignore"} -> ok;
-        {ok, 200, Body}  -> {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials, HttpOpts, RetryOpts),
-                                                 auth_result => success,
-                                                 anonymous => false,
-                                                 mountpoint  => mountpoint(Body, Credentials)}};
-        {ok, Code, _Body} -> {stop, Credentials#{auth_result => Code, anonymous => false}};
-        {error, Error}    -> ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [AuthReq#http_request.url, Error]),
-                             {stop, Credentials#{auth_result => Error, anonymous => false}}
+        {ok, 200, "ignore"} ->
+            emqx_metrics:inc('auth.http.ignore'), ok;
+        {ok, 200, Body}  ->
+            emqx_metrics:inc('auth.http.success'),
+            {stop, Credentials#{is_superuser => is_superuser(SuperReq, Credentials, HttpOpts, RetryOpts),
+                                auth_result => success,
+                                anonymous => false,
+                                mountpoint  => mountpoint(Body, Credentials)}};
+        {ok, Code, _Body} ->
+            emqx_metrics:inc('auth.http.failure'),
+            {stop, Credentials#{auth_result => Code, anonymous => false}};
+        {error, Error} ->
+            ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [AuthReq#http_request.url, Error]),
+            emqx_metrics:inc('auth.http.failure'),
+            {stop, Credentials#{auth_result => Error, anonymous => false}}
     end.
 
 description() -> "Authentication by HTTP API".
