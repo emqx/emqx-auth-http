@@ -86,13 +86,13 @@ start_http() ->
     application:ensure_all_started(minirest),
     Handlers = [{"/", minirest:handler(#{modules => [?MODULE]})}],
     Dispatch = [{"/[...]", minirest, Handlers}],
-    minirest:start_http(http_auth_server, [{port, 8991}], Dispatch).
+    minirest:start_http(http_auth_server, #{socket_opts => [{port, 8991}]}, Dispatch).
 
 start_https() ->
     application:ensure_all_started(minirest),
     Handlers = [{"/", minirest:handler(#{modules => [?MODULE]})}],
     Dispatch = [{"/[...]", minirest, Handlers}],
-    minirest:start_https(https_auth_server, [{port, 8991} | certopts()], Dispatch).
+    minirest:start_https(https_auth_server, #{socket_opts => [{port, 8991} | certopts()]}, Dispatch).
 
 %% @private
 certopts() ->
