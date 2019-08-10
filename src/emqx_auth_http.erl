@@ -48,11 +48,18 @@ check(Credentials, #{auth_req := AuthReq,
                                 mountpoint  => mountpoint(Body, Credentials)}};
         {ok, Code, _Body} ->
             emqx_metrics:inc('auth.http.failure'),
-            {stop, Credentials#{auth_result => Code, anonymous => false}};
+            case Code of
+                StatusCode when StatusCode == 403 ->
+                    ?LOG(error, "[Auth http] check_auth Url: ~p login failed. result ~p", [AuthReq#http_request.url, StatusCode]),
+                    {stop, Credentials#{auth_result => bad_username_or_password, anonymous => false}};
+                _Else ->
+                    ?LOG(error, "[Auth http] check_auth Url: ~p login failed due to server error. statusCode ~p", [AuthReq#http_request.url, Code]),
+                    {stop, Credentials#{auth_result => server_unavailable, anonymous => false}}
+            end;
         {error, Error} ->
             ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [AuthReq#http_request.url, Error]),
             emqx_metrics:inc('auth.http.failure'),
-            {stop, Credentials#{auth_result => Error, anonymous => false}}
+            {stop, Credentials#{auth_result => server_unavailable, anonymous => false}}
     end.
 
 description() -> "Authentication by HTTP API".
@@ -86,4 +93,3 @@ mountpoint(Body, #{mountpoint := Mountpoint}) ->
         {ok, _NotMap} ->
             Mountpoint
     end.
-
