@@ -45,7 +45,7 @@ load_auth_hook(AuthReq) ->
                super_req => SuperReq,
                http_opts => HttpOpts,
                retry_opts => maps:from_list(RetryOpts)},
-    emqx:hook('client.authenticate', fun emqx_auth_http:check/2, [Params]).
+    emqx:hook('client.authenticate', fun emqx_auth_http:check/3, [Params]).
 
 load_acl_hook(AclReq) ->
     emqx_acl_http:register_metrics(),
@@ -57,7 +57,7 @@ load_acl_hook(AclReq) ->
     emqx:hook('client.check_acl', fun emqx_acl_http:check_acl/5, [Params]).
 
 stop(_State) ->
-    emqx:unhook('client.authenticate', fun emqx_auth_http:check/2),
+    emqx:unhook('client.authenticate', fun emqx_auth_http:check/3),
     emqx:unhook('client.check_acl', fun emqx_acl_http:check_acl/5),
     emqx_auth_http_cfg:unregister().
 
