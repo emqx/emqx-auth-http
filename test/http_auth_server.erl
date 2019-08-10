@@ -80,7 +80,7 @@ check_acl(_Binding, Params) ->
     return(check(Params, ?ACL)).
 
 return(allow) -> {200, <<"allow">>};
-return(deny) -> {404, <<"deny">>}.
+return(deny) -> {403, <<"deny">>}.
 
 start_http() ->
     application:ensure_all_started(minirest),
