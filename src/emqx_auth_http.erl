@@ -48,15 +48,9 @@ check(Credentials, AuthResult,
                                 anonymous => false,
                                 mountpoint  => mountpoint(Body, Credentials)}};
         {ok, Code, _Body} ->
+            ?LOG(error, "[Auth http] check_auth Url: ~p login failed. result ~p", [AuthReq#http_request.url, Code]),
             emqx_metrics:inc('auth.http.failure'),
-            case Code of
-                StatusCode when StatusCode == 403 ->
-                    ?LOG(error, "[Auth http] check_auth Url: ~p login failed. result ~p", [AuthReq#http_request.url, StatusCode]),
-                    {stop, AuthResult#{auth_result => bad_username_or_password, anonymous => false}};
-                _Else ->
-                    ?LOG(error, "[Auth http] check_auth Url: ~p login failed due to server error. statusCode ~p", [AuthReq#http_request.url, Code]),
-                    {stop, AuthResult#{auth_result => server_unavailable, anonymous => false}}
-            end;
+            {stop, AuthResult#{auth_result => http_to_connack_error(Code), anonymous => false}};
         {error, Error} ->
             ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p", [AuthReq#http_request.url, Error]),
             emqx_metrics:inc('auth.http.failure'),
@@ -94,3 +88,11 @@ mountpoint(Body, #{mountpoint := Mountpoint}) ->
         {ok, _NotMap} ->
             Mountpoint
     end.
+
+http_to_connack_error(400) -> bad_username_or_password;
+http_to_connack_error(401) -> bad_username_or_password;
+http_to_connack_error(403) -> not_authorized;
+http_to_connack_error(429) -> banned;
+http_to_connack_error(503) -> server_unavailable;
+http_to_connack_error(504) -> server_busy;
+http_to_connack_error(_) -> server_unavailable.
