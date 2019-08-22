@@ -147,25 +147,25 @@ t_check_auth(_) ->
 
 t_sub_pub(_) ->
     ct:pal("start client"),
-    {ok, T1} = emqx_client:start_link([{host, "localhost"},
-                                       {client_id, <<"client1">>},
-                                       {username, <<"testuser1">>},
-                                       {password, <<"pass1">>}]),
-    {ok, _} = emqx_client:connect(T1),
-    emqx_client:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
+    {ok, T1} = emqtt:start_link([{host, "localhost"},
+                                 {client_id, <<"client1">>},
+                                 {username, <<"testuser1">>},
+                                 {password, <<"pass1">>}]),
+    {ok, _} = emqtt:connect(T1),
+    emqtt:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
     timer:sleep(1000),
-    {ok, T2} = emqx_client:start_link([{host, "localhost"},
-                                       {client_id, <<"client2">>},
-                                       {username, <<"testuser2">>},
-                                       {password, <<"pass2">>}]),
-    {ok, _} = emqx_client:connect(T2),
-    emqx_client:subscribe(T2, <<"topic">>),
+    {ok, T2} = emqtt:start_link([{host, "localhost"},
+                                 {client_id, <<"client2">>},
+                                 {username, <<"testuser2">>},
+                                 {password, <<"pass2">>}]),
+    {ok, _} = emqtt:connect(T2),
+    emqtt:subscribe(T2, <<"topic">>),
     receive
         {publish, _Topic, Payload} ->
             ?assertEqual(<<"body">>, Payload)
         after 1000 -> false end,
-    emqx_client:disconnect(T1),
-    emqx_client:disconnect(T2).
+    emqtt:disconnect(T1),
+    emqtt:disconnect(T2).
 
 t_comment_config(_) ->
     AuthCount = length(emqx_hooks:lookup('client.authenticate')),
