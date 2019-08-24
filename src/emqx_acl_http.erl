@@ -1,4 +1,5 @@
-%% Copyright (c) 2013-2019 EMQ Technologies Co., Ltd. All Rights Reserved.
+%%--------------------------------------------------------------------
+%% Copyright (c) 2019 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
+%%--------------------------------------------------------------------
 
 -module(emqx_acl_http).
 
@@ -31,15 +33,21 @@
         , description/0
         ]).
 
+-define(ACL_METRICS,
+        ['acl.http.allow',
+         'acl.http.deny',
+         'acl.http.ignore'
+        ]).
+
 register_metrics() ->
-    [emqx_metrics:new(MetricName) || MetricName <- ['acl.http.allow', 'acl.http.deny', 'acl.http.ignore']].
+    [emqx_metrics:new(MetricName) || MetricName <- ?ACL_METRICS].
 
-%%------------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% ACL callbacks
-%%------------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 
-check_acl(Credentials, PubSub, Topic, AclResult, State) ->
-    case do_check_acl(Credentials, PubSub, Topic, AclResult, State) of
+check_acl(Client, PubSub, Topic, AclResult, State) ->
+    case do_check_acl(Client, PubSub, Topic, AclResult, State) of
         ok -> emqx_metrics:inc('acl.http.ignore'), ok;
         {stop, allow} -> emqx_metrics:inc('acl.http.allow'), {stop, allow};
         {stop, deny} -> emqx_metrics:inc('acl.http.deny'), {stop, deny}
@@ -47,16 +55,17 @@ check_acl(Credentials, PubSub, Topic, AclResult, State) ->
 
 do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;
-do_check_acl(Credentials, PubSub, Topic, _AclResult, #{acl_req := AclReq,
-                                                       http_opts := HttpOpts,
-                                                       retry_opts := RetryOpts}) ->
-    Credentials1 = Credentials#{access => access(PubSub), topic => Topic},
-    case check_acl_request(AclReq, Credentials1, HttpOpts, RetryOpts) of
+do_check_acl(Client, PubSub, Topic, _AclResult, #{acl_req    := AclReq,
+                                                  http_opts  := HttpOpts,
+                                                  retry_opts := RetryOpts}) ->
+    Client1 = Client#{access => access(PubSub), topic => Topic},
+    case check_acl_request(AclReq, Client1, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} -> ok;
         {ok, 200, _Body}    -> {stop, allow};
         {ok, _Code, _Body}  -> {stop, deny};
         {error, Error}      ->
-            ?LOG(error, "[ACL http] do_check_acl url ~s Error: ~p", [AclReq#http_request.url, Error]),
+            ?LOG(error, "[ACL http] do_check_acl url ~s Error: ~p",
+                 [AclReq#http_request.url, Error]),
             ok
     end.
 
@@ -64,12 +73,15 @@ reload_acl(_State) -> ok.
 
 description() -> "ACL with HTTP API".
 
-%%------------------------------------------------------------------------------
-%% Interval functions
-%%------------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+%% Internal functions
+%%--------------------------------------------------------------------
 
-check_acl_request(#http_request{method = Method, url = Url, params = Params}, Credentials, HttpOpts, RetryOpts) ->
-    request(Method, Url, feedvar(Params, Credentials), HttpOpts, RetryOpts).
+check_acl_request(#http_request{method = Method,
+                                url    = Url,
+                                params = Params},
+                  Client, HttpOpts, RetryOpts) ->
+    request(Method, Url, feedvar(Params, Client), HttpOpts, RetryOpts).
 
 access(subscribe) -> 1;
 access(publish)   -> 2.
