@@ -1,4 +1,5 @@
-%% Copyright (c) 2013-2019 EMQ Technologies Co., Ltd. All Rights Reserved.
+%%--------------------------------------------------------------------
+%% Copyright (c) 2019 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
+%%--------------------------------------------------------------------
 
 -module(emqx_auth_http_cfg).
 
@@ -31,7 +33,9 @@ unregister() ->
     clique_config:unload_schema(?APP).
 
 register_formatter() ->
-    [clique:register_formatter(cuttlefish_variable:tokenize(Key), fun formatter_callback/2) || Key <- keys()].
+    [clique:register_formatter(
+       cuttlefish_variable:tokenize(Key), fun formatter_callback/2)
+         || Key <- keys()].
 
 formatter_callback([_, _, _], Params) ->
     proplists:get_value(url, Params);
@@ -87,5 +91,6 @@ keys() ->
      "auth.http.super_req.params",
      "auth.http.acl_req",
      "auth.http.acl_req.method",
-     "auth.http.acl_req.params"].
+     "auth.http.acl_req.params"
+    ].
 
