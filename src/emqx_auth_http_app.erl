@@ -1,4 +1,5 @@
-%% Copyright (c) 2013-2019 EMQ Technologies Co., Ltd. All Rights Reserved.
+%%--------------------------------------------------------------------
+%% Copyright (c) 2019 EMQ Technologies Co., Ltd. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 %% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
+%%--------------------------------------------------------------------
 
 -module(emqx_auth_http_app).
 
@@ -41,9 +43,9 @@ load_auth_hook(AuthReq) ->
     SuperReq = r(application:get_env(?APP, super_req, undefined)),
     HttpOpts = application:get_env(?APP, http_opts, []),
     RetryOpts = application:get_env(?APP, retry_opts, []),
-    Params = #{auth_req => AuthReq,
-               super_req => SuperReq,
-               http_opts => HttpOpts,
+    Params = #{auth_req   => AuthReq,
+               super_req  => SuperReq,
+               http_opts  => HttpOpts,
                retry_opts => maps:from_list(RetryOpts)},
     emqx:hook('client.authenticate', fun emqx_auth_http:check/3, [Params]).
 
@@ -51,8 +53,8 @@ load_acl_hook(AclReq) ->
     emqx_acl_http:register_metrics(),
     HttpOpts = application:get_env(?APP, http_opts, []),
     RetryOpts = application:get_env(?APP, retry_opts, []),
-    Params = #{acl_req => AclReq,
-               http_opts => HttpOpts,
+    Params = #{acl_req    => AclReq,
+               http_opts  => HttpOpts,
                retry_opts => maps:from_list(RetryOpts)},
     emqx:hook('client.check_acl', fun emqx_acl_http:check_acl/5, [Params]).
 
