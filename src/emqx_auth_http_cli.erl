@@ -71,20 +71,20 @@ bin(Binary) when is_binary(Binary) ->
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, Credentials = #{username  := Username,
-                                client_id := ClientId,
-                                sockname  := {_, AcptPort},
-                                peername  := {IpAddr, _}}) ->
+feedvar(Params, Client = #{username  := Username,
+                           client_id := ClientId,
+                           sockname  := {_, AcptPort},
+                           peername  := {IpAddr, _}}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
                  ({Param, "%l"}) -> {Param, AcptPort};
                  ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
-                 ({Param, "%P"}) -> {Param, maps:get(password, Credentials, undefined)};
-                 ({Param, "%C"}) -> {Param, maps:get(cn, Credentials, undefined)};
-                 ({Param, "%d"}) -> {Param, maps:get(dn, Credentials, undefined)};
-                 ({Param, "%A"}) -> {Param, maps:get(access, Credentials, undefined)};
-                 ({Param, "%t"}) -> {Param, maps:get(topic, Credentials, undefined)};
-                 ({Param, "%m"}) -> {Param, maps:get(mountpoint, Credentials, undefined)};
+                 ({Param, "%P"}) -> {Param, maps:get(password, Client, undefined)};
+                 ({Param, "%C"}) -> {Param, maps:get(cn, Client, undefined)};
+                 ({Param, "%d"}) -> {Param, maps:get(dn, Client, undefined)};
+                 ({Param, "%A"}) -> {Param, maps:get(access, Client, undefined)};
+                 ({Param, "%t"}) -> {Param, maps:get(topic, Client, undefined)};
+                 ({Param, "%m"}) -> {Param, maps:get(mountpoint, Client, undefined)};
                  ({Param, Var})  -> {Param, Var}
               end, Params).
 
