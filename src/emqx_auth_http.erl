@@ -39,23 +39,24 @@
          'auth.http.ignore'
         ]).
 
+-spec(register_metrics() -> ok).
 register_metrics() ->
-    [emqx_metrics:new(MetricName) || MetricName <- ?AUTH_METRICS].
+    lists:foreach(fun emqx_metrics:new/1, ?AUTH_METRICS).
 
-check(Client, AuthResult, #{auth_req   := AuthReq,
-                            super_req  := SuperReq,
-                            http_opts  := HttpOpts,
-                            retry_opts := RetryOpts}) ->
-    case authenticate(AuthReq, Client, HttpOpts, RetryOpts) of
+check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
+                                super_req  := SuperReq,
+                                http_opts  := HttpOpts,
+                                retry_opts := RetryOpts}) ->
+    case authenticate(AuthReq, ClientInfo, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} ->
             emqx_metrics:inc('auth.http.ignore'), ok;
         {ok, 200, Body}  ->
             emqx_metrics:inc('auth.http.success'),
-            IsSuperuser = is_superuser(SuperReq, Client, HttpOpts, RetryOpts),
+            IsSuperuser = is_superuser(SuperReq, ClientInfo, HttpOpts, RetryOpts),
             {stop, AuthResult#{is_superuser => IsSuperuser,
                                 auth_result => success,
                                 anonymous   => false,
-                                mountpoint  => mountpoint(Body, Client)}};
+                                mountpoint  => mountpoint(Body, ClientInfo)}};
         {ok, Code, _Body} ->
             ?LOG(error, "[Auth http] check_auth Url: ~p login failed. result ~p",
                  [AuthReq#http_request.url, Code]),
@@ -80,17 +81,17 @@ description() -> "Authentication by HTTP API".
 authenticate(#http_request{method = Method,
                            url    = Url,
                            params = Params},
-             Client, HttpOpts, RetryOpts) ->
-   request(Method, Url, feedvar(Params, Client), HttpOpts, RetryOpts).
+             ClientInfo, HttpOpts, RetryOpts) ->
+   request(Method, Url, feedvar(Params, ClientInfo), HttpOpts, RetryOpts).
 
 -spec(is_superuser(maybe(#http_request{}), emqx_types:client(), list(), list()) -> boolean()).
-is_superuser(undefined, _Client, _HttpOpts, _RetryOpts) ->
+is_superuser(undefined, _ClientInfo, _HttpOpts, _RetryOpts) ->
     false;
 is_superuser(#http_request{method = Method,
                            url    = Url,
                            params = Params},
-             Client, HttpOpts, RetryOpts) ->
-    case request(Method, Url, feedvar(Params, Client), HttpOpts, RetryOpts) of
+             ClientInfo, HttpOpts, RetryOpts) ->
+    case request(Method, Url, feedvar(Params, ClientInfo), HttpOpts, RetryOpts) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
         {error, Error}     -> ?LOG(error, "[Auth HTTP] is_superuser ~s Error: ~p", [Url, Error]),
@@ -102,8 +103,7 @@ mountpoint(Body, #{mountpoint := Mountpoint}) ->
         {error, _} -> Mountpoint;
         {ok, Json} when is_map(Json) ->
             maps:get(<<"mountpoint">>, Json, Mountpoint);
-        {ok, _NotMap} ->
-            Mountpoint
+        {ok, _NotMap} -> Mountpoint
     end.
 
 http_to_connack_error(400) -> bad_username_or_password;
@@ -113,3 +113,4 @@ http_to_connack_error(429) -> banned;
 http_to_connack_error(503) -> server_unavailable;
 http_to_connack_error(504) -> server_busy;
 http_to_connack_error(_) -> server_unavailable.
+
