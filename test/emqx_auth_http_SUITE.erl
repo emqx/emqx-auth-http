@@ -24,11 +24,11 @@
 
 -define(APP, emqx_auth_http).
 
--define(USER(ClientId, Username, Sockname, Peername, Zone),
-        #{client_id => ClientId, username => Username, sockname => Sockname, peername => Peername, zone => Zone}).
+-define(USER(ClientId, Username, Protocol, Peerhost, Zone),
+        #{client_id => ClientId, username => Username, protocol => Protocol, peerhost => Peerhost, zone => Zone}).
 
--define(USER(ClientId, Username, Sockname, Peername, Zone, Mountpoint),
-        #{client_id => ClientId, username => Username, sockname => Sockname, peername => Peername, zone => Zone, mountpoint => Mountpoint}).
+-define(USER(ClientId, Username, Protocol, Peerhost, Zone, Mountpoint),
+        #{client_id => ClientId, username => Username, protocol => Protocol, peerhost => Peerhost, zone => Zone, mountpoint => Mountpoint}).
 all() ->
     [{group, http},
      {group, https}].
@@ -108,30 +108,30 @@ set_https_client_opts() ->
 %%------------------------------------------------------------------------------
 
 t_check_acl(_) ->
-    SuperUser = ?USER(<<"superclient">>, <<"superuser">>, {{127,0,0,1}, 1883}, {{127, 0, 0, 1}, 2982}, external),
+    SuperUser = ?USER(<<"superclient">>, <<"superuser">>, mqtt, {127,0,0,1}, external),
     deny = emqx_access_control:check_acl(SuperUser, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(SuperUser, publish, <<"anytopic">>),
 
-    User1 = ?USER(<<"client1">>, <<"testuser">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2981}, external),
-    UnIpUser1 = ?USER(<<"client1">>, <<"testuser">>, {{127,0,0,1}, 1883}, {{192,168,0,4}, 2981}, external),
-    UnClientIdUser1 = ?USER(<<"unkonwc">>, <<"testuser">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2981}, external),
-    UnnameUser1= ?USER(<<"client1">>, <<"unuser">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2981}, external),
+    User1 = ?USER(<<"client1">>, <<"testuser">>, mqtt, {127,0,0,1}, external),
+    UnIpUser1 = ?USER(<<"client1">>, <<"testuser">>, mqtt, {192,168,0,4}, external),
+    UnClientIdUser1 = ?USER(<<"unkonwc">>, <<"testuser">>, mqtt, {127,0,0,1}, external),
+    UnnameUser1= ?USER(<<"client1">>, <<"unuser">>, mqtt, {127,0,0,1}, external),
     allow = emqx_access_control:check_acl(User1, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(User1, publish, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(UnIpUser1, subscribe, <<"users/testuser/1">>),
     deny = emqx_access_control:check_acl(UnClientIdUser1, subscribe, <<"users/testuser/1">>),
     deny  = emqx_access_control:check_acl(UnnameUser1, subscribe, <<"$SYS/testuser/1">>),
 
-    User2 = ?USER(<<"client2">>, <<"xyz">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2982}, external),
-    UserC = ?USER(<<"client2">>, <<"xyz">>, {{127,0,0,1}, 1883}, {{192,168,1,3}, 2983}, external),
+    User2 = ?USER(<<"client2">>, <<"xyz">>, mqtt, {127,0,0,1}, external),
+    UserC = ?USER(<<"client2">>, <<"xyz">>, mqtt, {192,168,1,3}, external),
     allow = emqx_access_control:check_acl(UserC, publish, <<"a/b/c">>),
     deny = emqx_access_control:check_acl(User2, publish, <<"a/b/c">>),
     deny  = emqx_access_control:check_acl(User2, subscribe, <<"$SYS/testuser/1">>).
 
 t_check_auth(_) ->
-    User1 = ?USER(<<"client1">>, <<"testuser1">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2981}, external, undefined),
-    User2 = ?USER(<<"client2">>, <<"testuser2">>, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2982}, exteneral, undefined),
-    User3 = ?USER(<<"client3">>, undefined, {{127,0,0,1}, 1883}, {{127,0,0,1}, 2983}, exteneral, undefined),
+    User1 = ?USER(<<"client1">>, <<"testuser1">>, mqtt, {127,0,0,1}, external, undefined),
+    User2 = ?USER(<<"client2">>, <<"testuser2">>, mqtt, {127,0,0,1}, exteneral, undefined),
+    User3 = ?USER(<<"client3">>, undefined, mqtt, {127,0,0,1}, exteneral, undefined),
 
     {ok, #{auth_result := success,
            anonymous := false,
