@@ -23,7 +23,7 @@ File: etc/emqx_auth_http.conf
 ##  - %u: username
 ##  - %c: clientid
 ##  - %a: ipaddress
-##  - %l: accept port
+##  - %r: protocol
 ##  - %P: password
 ##  - %C: common name of client TLS cert
 ##  - %d: subject of client TLS cert
@@ -42,7 +42,7 @@ auth.http.auth_req.params = clientid=%c,username=%u,password=%P
 ##  - %u: username
 ##  - %c: clientid
 ##  - %a: ipaddress
-##  - %l: accept port
+##  - %r: protocol
 ##  - %P: password
 ##  - %C: common name of client TLS cert
 ##  - %d: subject of client TLS cert
@@ -62,7 +62,7 @@ auth.http.super_req.params = clientid=%c,username=%u
 ##  - %u: username
 ##  - %c: clientid
 ##  - %a: ipaddress
-##  - %l: accept port
+##  - %r: protocol
 ##  - %m: mountpoint
 ##  - %t: topic
 ##
