@@ -39,27 +39,25 @@
          'acl.http.ignore'
         ]).
 
+-spec(register_metrics() -> ok).
 register_metrics() ->
-    [emqx_metrics:new(MetricName) || MetricName <- ?ACL_METRICS].
+    lists:foreach(fun emqx_metrics:new/1, ?ACL_METRICS).
 
 %%--------------------------------------------------------------------
 %% ACL callbacks
 %%--------------------------------------------------------------------
 
-check_acl(Client, PubSub, Topic, AclResult, State) ->
-    case do_check_acl(Client, PubSub, Topic, AclResult, State) of
-        ok -> emqx_metrics:inc('acl.http.ignore'), ok;
-        {stop, allow} -> emqx_metrics:inc('acl.http.allow'), {stop, allow};
-        {stop, deny} -> emqx_metrics:inc('acl.http.deny'), {stop, deny}
-    end.
+check_acl(ClientInfo, PubSub, Topic, AclResult, State) ->
+    return_with(fun inc_metrics/1,
+                do_check_acl(ClientInfo, PubSub, Topic, AclResult, State)).
 
 do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;
-do_check_acl(Client, PubSub, Topic, _AclResult, #{acl_req    := AclReq,
-                                                  http_opts  := HttpOpts,
-                                                  retry_opts := RetryOpts}) ->
-    Client1 = Client#{access => access(PubSub), topic => Topic},
-    case check_acl_request(AclReq, Client1, HttpOpts, RetryOpts) of
+do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req    := AclReq,
+                                                      http_opts  := HttpOpts,
+                                                      retry_opts := RetryOpts}) ->
+    ClientInfo1 = ClientInfo#{access => access(PubSub), topic => Topic},
+    case check_acl_request(AclReq, ClientInfo1, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} -> ok;
         {ok, 200, _Body}    -> {stop, allow};
         {ok, _Code, _Body}  -> {stop, deny};
@@ -77,11 +75,21 @@ description() -> "ACL with HTTP API".
 %% Internal functions
 %%--------------------------------------------------------------------
 
+inc_metrics(ok) ->
+    emqx_metrics:inc('acl.http.ignore');
+inc_metrics({stop, allow}) ->
+    emqx_metrics:inc('acl.http.allow');
+inc_metrics({stop, deny}) ->
+    emqx_metrics:inc('acl.http.deny').
+
+return_with(Fun, Result) ->
+    Fun(Result), Result.
+
 check_acl_request(#http_request{method = Method,
                                 url    = Url,
                                 params = Params},
-                  Client, HttpOpts, RetryOpts) ->
-    request(Method, Url, feedvar(Params, Client), HttpOpts, RetryOpts).
+                  ClientInfo, HttpOpts, RetryOpts) ->
+    request(Method, Url, feedvar(Params, ClientInfo), HttpOpts, RetryOpts).
 
 access(subscribe) -> 1;
 access(publish)   -> 2.
