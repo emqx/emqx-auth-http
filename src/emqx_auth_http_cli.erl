@@ -71,20 +71,20 @@ bin(Binary) when is_binary(Binary) ->
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, Credentials = #{username  := Username,
-                                client_id := ClientId,
-                                sockname  := {_, AcptPort},
-                                peername  := {IpAddr, _}}) ->
+feedvar(Params, ClientInfo = #{username  := Username,
+                               client_id := ClientId,
+                               protocol  := Protocol,
+                               peerhost  := Peerhost}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
-                 ({Param, "%l"}) -> {Param, AcptPort};
-                 ({Param, "%a"}) -> {Param, inet:ntoa(IpAddr)};
-                 ({Param, "%P"}) -> {Param, maps:get(password, Credentials, undefined)};
-                 ({Param, "%C"}) -> {Param, maps:get(cn, Credentials, undefined)};
-                 ({Param, "%d"}) -> {Param, maps:get(dn, Credentials, undefined)};
-                 ({Param, "%A"}) -> {Param, maps:get(access, Credentials, undefined)};
-                 ({Param, "%t"}) -> {Param, maps:get(topic, Credentials, undefined)};
-                 ({Param, "%m"}) -> {Param, maps:get(mountpoint, Credentials, undefined)};
+                 ({Param, "%r"}) -> {Param, Protocol};
+                 ({Param, "%a"}) -> {Param, inet:ntoa(Peerhost)};
+                 ({Param, "%P"}) -> {Param, maps:get(password, ClientInfo, undefined)};
+                 ({Param, "%C"}) -> {Param, maps:get(cn, ClientInfo, undefined)};
+                 ({Param, "%d"}) -> {Param, maps:get(dn, ClientInfo, undefined)};
+                 ({Param, "%A"}) -> {Param, maps:get(access, ClientInfo, undefined)};
+                 ({Param, "%t"}) -> {Param, maps:get(topic, ClientInfo, undefined)};
+                 ({Param, "%m"}) -> {Param, maps:get(mountpoint, ClientInfo, undefined)};
                  ({Param, Var})  -> {Param, Var}
               end, Params).
 
