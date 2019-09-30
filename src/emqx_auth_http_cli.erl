@@ -71,10 +71,10 @@ bin(Binary) when is_binary(Binary) ->
 %% Feed Variables
 %%--------------------------------------------------------------------
 
-feedvar(Params, ClientInfo = #{username  := Username,
-                               client_id := ClientId,
-                               protocol  := Protocol,
-                               peerhost  := Peerhost}) ->
+feedvar(Params, ClientInfo = #{username := Username,
+                               clientid := ClientId,
+                               protocol := Protocol,
+                               peerhost := Peerhost}) ->
     lists:map(fun({Param, "%u"}) -> {Param, Username};
                  ({Param, "%c"}) -> {Param, ClientId};
                  ({Param, "%r"}) -> {Param, Protocol};
