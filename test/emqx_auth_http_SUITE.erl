@@ -25,10 +25,12 @@
 -define(APP, emqx_auth_http).
 
 -define(USER(ClientId, Username, Protocol, Peerhost, Zone),
-        #{client_id => ClientId, username => Username, protocol => Protocol, peerhost => Peerhost, zone => Zone}).
+        #{clientid => ClientId, username => Username, protocol => Protocol,
+          peerhost => Peerhost, zone => Zone}).
 
 -define(USER(ClientId, Username, Protocol, Peerhost, Zone, Mountpoint),
-        #{client_id => ClientId, username => Username, protocol => Protocol, peerhost => Peerhost, zone => Zone, mountpoint => Mountpoint}).
+        #{clientid => ClientId, username => Username, protocol => Protocol,
+          peerhost => Peerhost, zone => Zone, mountpoint => Mountpoint}).
 all() ->
     [{group, http},
      {group, https}].
@@ -148,14 +150,14 @@ t_check_auth(_) ->
 t_sub_pub(_) ->
     ct:pal("start client"),
     {ok, T1} = emqtt:start_link([{host, "localhost"},
-                                 {client_id, <<"client1">>},
+                                 {clientid, <<"client1">>},
                                  {username, <<"testuser1">>},
                                  {password, <<"pass1">>}]),
     {ok, _} = emqtt:connect(T1),
     emqtt:publish(T1, <<"topic">>, <<"body">>, [{qos, 0}, {retain, true}]),
     timer:sleep(1000),
     {ok, T2} = emqtt:start_link([{host, "localhost"},
-                                 {client_id, <<"client2">>},
+                                 {clientid, <<"client2">>},
                                  {username, <<"testuser2">>},
                                  {password, <<"pass2">>}]),
     {ok, _} = emqtt:connect(T2),
