@@ -35,7 +35,6 @@
 start(_StartType, _StartArgs) ->
     with_env(auth_req, fun load_auth_hook/1),
     with_env(acl_req,  fun load_acl_hook/1),
-    emqx_auth_http_cfg:register(),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 load_auth_hook(AuthReq) ->
@@ -60,8 +59,7 @@ load_acl_hook(AclReq) ->
 
 stop(_State) ->
     emqx:unhook('client.authenticate', fun emqx_auth_http:check/3),
-    emqx:unhook('client.check_acl', fun emqx_acl_http:check_acl/5),
-    emqx_auth_http_cfg:unregister().
+    emqx:unhook('client.check_acl', fun emqx_acl_http:check_acl/5).
 
 %%--------------------------------------------------------------------
 %% Dummy supervisor
