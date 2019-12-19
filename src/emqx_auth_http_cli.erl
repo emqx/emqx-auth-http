@@ -80,6 +80,7 @@ feedvar(Params, ClientInfo = #{username := Username,
                  ({Param, "%r"}) -> {Param, Protocol};
                  ({Param, "%a"}) -> {Param, inet:ntoa(Peerhost)};
                  ({Param, "%P"}) -> {Param, maps:get(password, ClientInfo, undefined)};
+                 ({Param, "%p"}) -> {Param, maps:get(sockport, ClientInfo, undefined)};
                  ({Param, "%C"}) -> {Param, maps:get(cn, ClientInfo, undefined)};
                  ({Param, "%d"}) -> {Param, maps:get(dn, ClientInfo, undefined)};
                  ({Param, "%A"}) -> {Param, maps:get(access, ClientInfo, undefined)};

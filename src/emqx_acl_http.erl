@@ -21,6 +21,8 @@
 -include_lib("emqx/include/emqx.hrl").
 -include_lib("emqx/include/logger.hrl").
 
+-logger_header("[ACL http]").
+
 -import(emqx_auth_http_cli,
         [ request/5
         , feedvar/2
@@ -62,7 +64,7 @@ do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req    := AclReq,
         {ok, 200, _Body}    -> {stop, allow};
         {ok, _Code, _Body}  -> {stop, deny};
         {error, Error}      ->
-            ?LOG(error, "[ACL http] do_check_acl url ~s Error: ~p",
+            ?LOG(error, "Request ACL url ~s, error: ~p",
                  [AclReq#http_request.url, Error]),
             ok
     end.
