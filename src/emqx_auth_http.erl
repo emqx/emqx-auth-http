@@ -22,6 +22,8 @@
 -include_lib("emqx/include/logger.hrl").
 -include_lib("emqx/include/types.hrl").
 
+-logger_header("[Auth http]").
+
 -import(emqx_auth_http_cli,
         [ request/5
         , feedvar/2
@@ -58,13 +60,13 @@ check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
                                 anonymous   => false,
                                 mountpoint  => mountpoint(Body, ClientInfo)}};
         {ok, Code, _Body} ->
-            ?LOG(error, "[Auth http] check_auth Url: ~p login failed. result ~p",
+            ?LOG(error, "Deny connection from url: ~s, response http code: ~p",
                  [AuthReq#http_request.url, Code]),
             emqx_metrics:inc('auth.http.failure'),
             {stop, AuthResult#{auth_result => http_to_connack_error(Code),
                                anonymous   => false}};
         {error, Error} ->
-            ?LOG(error, "[Auth http] check_auth Url: ~p Error: ~p",
+            ?LOG(error, "Request auth url: ~s, error: ~p",
                  [AuthReq#http_request.url, Error]),
             emqx_metrics:inc('auth.http.failure'),
             %%FIXME later: server_unavailable is not right.
@@ -94,7 +96,7 @@ is_superuser(#http_request{method = Method,
     case request(Method, Url, feedvar(Params, ClientInfo), HttpOpts, RetryOpts) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
-        {error, Error}     -> ?LOG(error, "[Auth HTTP] is_superuser ~s Error: ~p", [Url, Error]),
+        {error, Error}     -> ?LOG(error, "Request superuser url ~s, error: ~p", [Url, Error]),
                               false
     end.
 
