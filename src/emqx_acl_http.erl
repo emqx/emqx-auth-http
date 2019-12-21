@@ -35,12 +35,6 @@
         , description/0
         ]).
 
--define(ACL_METRICS,
-        ['acl.http.allow',
-         'acl.http.deny',
-         'acl.http.ignore'
-        ]).
-
 -spec(register_metrics() -> ok).
 register_metrics() ->
     lists:foreach(fun emqx_metrics:new/1, ?ACL_METRICS).
@@ -78,11 +72,11 @@ description() -> "ACL with HTTP API".
 %%--------------------------------------------------------------------
 
 inc_metrics(ok) ->
-    emqx_metrics:inc('acl.http.ignore');
+    ?ACL_METRICS(ignore);
 inc_metrics({stop, allow}) ->
-    emqx_metrics:inc('acl.http.allow');
+    ?ACL_METRICS(allow);
 inc_metrics({stop, deny}) ->
-    emqx_metrics:inc('acl.http.deny').
+    ?ACL_METRICS(deny).
 
 return_with(Fun, Result) ->
     Fun(Result), Result.

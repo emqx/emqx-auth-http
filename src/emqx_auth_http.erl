@@ -35,12 +35,6 @@
         , description/0
         ]).
 
--define(AUTH_METRICS,
-        ['auth.http.success',
-         'auth.http.failure',
-         'auth.http.ignore'
-        ]).
-
 -spec(register_metrics() -> ok).
 register_metrics() ->
     lists:foreach(fun emqx_metrics:new/1, ?AUTH_METRICS).
@@ -51,9 +45,9 @@ check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
                                 retry_opts := RetryOpts}) ->
     case authenticate(AuthReq, ClientInfo, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} ->
-            emqx_metrics:inc('auth.http.ignore'), ok;
+            ?AUTH_METRICS(ignore), ok;
         {ok, 200, Body}  ->
-            emqx_metrics:inc('auth.http.success'),
+            ?AUTH_METRICS(success),
             IsSuperuser = is_superuser(SuperReq, ClientInfo, HttpOpts, RetryOpts),
             {stop, AuthResult#{is_superuser => IsSuperuser,
                                 auth_result => success,
@@ -62,13 +56,13 @@ check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
         {ok, Code, _Body} ->
             ?LOG(error, "Deny connection from url: ~s, response http code: ~p",
                  [AuthReq#http_request.url, Code]),
-            emqx_metrics:inc('auth.http.failure'),
+            ?AUTH_METRICS(failure),
             {stop, AuthResult#{auth_result => http_to_connack_error(Code),
                                anonymous   => false}};
         {error, Error} ->
             ?LOG(error, "Request auth url: ~s, error: ~p",
                  [AuthReq#http_request.url, Error]),
-            emqx_metrics:inc('auth.http.failure'),
+            ?AUTH_METRICS(failure),
             %%FIXME later: server_unavailable is not right.
             {stop, AuthResult#{auth_result => server_unavailable,
                                anonymous   => false}}
@@ -115,4 +109,3 @@ http_to_connack_error(429) -> banned;
 http_to_connack_error(503) -> server_unavailable;
 http_to_connack_error(504) -> server_busy;
 http_to_connack_error(_) -> server_unavailable.
-
