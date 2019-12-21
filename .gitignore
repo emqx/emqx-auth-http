@@ -22,3 +22,4 @@ rebar.lock
 rebar3.crashdump
 etc/emqx_auth_http.conf.rendered
 .rebar3/
+*.swp

@@ -21,6 +21,8 @@
 -include_lib("emqx/include/emqx.hrl").
 -include_lib("emqx/include/logger.hrl").
 
+-logger_header("[ACL http]").
+
 -import(emqx_auth_http_cli,
         [ request/5
         , feedvar/2
@@ -31,12 +33,6 @@
         , check_acl/5
         , reload_acl/1
         , description/0
-        ]).
-
--define(ACL_METRICS,
-        ['acl.http.allow',
-         'acl.http.deny',
-         'acl.http.ignore'
         ]).
 
 -spec(register_metrics() -> ok).
@@ -62,7 +58,7 @@ do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req    := AclReq,
         {ok, 200, _Body}    -> {stop, allow};
         {ok, _Code, _Body}  -> {stop, deny};
         {error, Error}      ->
-            ?LOG(error, "[ACL http] do_check_acl url ~s Error: ~p",
+            ?LOG(error, "Request ACL url ~s, error: ~p",
                  [AclReq#http_request.url, Error]),
             ok
     end.
@@ -76,11 +72,11 @@ description() -> "ACL with HTTP API".
 %%--------------------------------------------------------------------
 
 inc_metrics(ok) ->
-    emqx_metrics:inc('acl.http.ignore');
+    emqx_metrics:inc(?ACL_METRICS(ignore));
 inc_metrics({stop, allow}) ->
-    emqx_metrics:inc('acl.http.allow');
+    emqx_metrics:inc(?ACL_METRICS(allow));
 inc_metrics({stop, deny}) ->
-    emqx_metrics:inc('acl.http.deny').
+    emqx_metrics:inc(?ACL_METRICS(deny)).
 
 return_with(Fun, Result) ->
     Fun(Result), Result.
