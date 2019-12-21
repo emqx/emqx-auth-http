@@ -45,9 +45,9 @@ check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
                                 retry_opts := RetryOpts}) ->
     case authenticate(AuthReq, ClientInfo, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} ->
-            ?AUTH_METRICS(ignore), ok;
+            emqx_metrics:inc(?AUTH_METRICS(ignore)), ok;
         {ok, 200, Body}  ->
-            ?AUTH_METRICS(success),
+            emqx_metrics:inc(?AUTH_METRICS(success)),
             IsSuperuser = is_superuser(SuperReq, ClientInfo, HttpOpts, RetryOpts),
             {stop, AuthResult#{is_superuser => IsSuperuser,
                                 auth_result => success,
@@ -56,13 +56,13 @@ check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
         {ok, Code, _Body} ->
             ?LOG(error, "Deny connection from url: ~s, response http code: ~p",
                  [AuthReq#http_request.url, Code]),
-            ?AUTH_METRICS(failure),
+            emqx_metrics:inc(?AUTH_METRICS(failure)),
             {stop, AuthResult#{auth_result => http_to_connack_error(Code),
                                anonymous   => false}};
         {error, Error} ->
             ?LOG(error, "Request auth url: ~s, error: ~p",
                  [AuthReq#http_request.url, Error]),
-            ?AUTH_METRICS(failure),
+            emqx_metrics:inc(?AUTH_METRICS(failure)),
             %%FIXME later: server_unavailable is not right.
             {stop, AuthResult#{auth_result => server_unavailable,
                                anonymous   => false}}

@@ -72,11 +72,11 @@ description() -> "ACL with HTTP API".
 %%--------------------------------------------------------------------
 
 inc_metrics(ok) ->
-    ?ACL_METRICS(ignore);
+    emqx_metrics:inc(?ACL_METRICS(ignore));
 inc_metrics({stop, allow}) ->
-    ?ACL_METRICS(allow);
+    emqx_metrics:inc(?ACL_METRICS(allow));
 inc_metrics({stop, deny}) ->
-    ?ACL_METRICS(deny).
+    emqx_metrics:inc(?ACL_METRICS(deny)).
 
 return_with(Fun, Result) ->
     Fun(Result), Result.
