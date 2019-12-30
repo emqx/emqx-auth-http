@@ -42,10 +42,12 @@ load_auth_hook(AuthReq) ->
     SuperReq = r(application:get_env(?APP, super_req, undefined)),
     HttpOpts = application:get_env(?APP, http_opts, []),
     RetryOpts = application:get_env(?APP, retry_opts, []),
+    Headers = application:get_env(?APP, headers, []),
     Params = #{auth_req   => AuthReq,
                super_req  => SuperReq,
                http_opts  => HttpOpts,
-               retry_opts => maps:from_list(RetryOpts)},
+               retry_opts => maps:from_list(RetryOpts),
+               headers    => Headers},
     emqx:hook('client.authenticate', fun emqx_auth_http:check/3, [Params]).
 
 load_acl_hook(AclReq) ->
