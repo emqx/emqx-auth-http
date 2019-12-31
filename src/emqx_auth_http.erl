@@ -25,7 +25,7 @@
 -logger_header("[Auth http]").
 
 -import(emqx_auth_http_cli,
-        [ request/5
+        [ request/6
         , feedvar/2
         ]).
 
@@ -42,13 +42,14 @@ register_metrics() ->
 check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
                                 super_req  := SuperReq,
                                 http_opts  := HttpOpts,
-                                retry_opts := RetryOpts}) ->
-    case authenticate(AuthReq, ClientInfo, HttpOpts, RetryOpts) of
+                                retry_opts := RetryOpts,
+                                headers    := Headers}) ->
+    case authenticate(AuthReq, ClientInfo, Headers, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} ->
             emqx_metrics:inc(?AUTH_METRICS(ignore)), ok;
         {ok, 200, Body}  ->
             emqx_metrics:inc(?AUTH_METRICS(success)),
-            IsSuperuser = is_superuser(SuperReq, ClientInfo, HttpOpts, RetryOpts),
+            IsSuperuser = is_superuser(SuperReq, ClientInfo, Headers, HttpOpts, RetryOpts),
             {stop, AuthResult#{is_superuser => IsSuperuser,
                                 auth_result => success,
                                 anonymous   => false,
@@ -77,17 +78,17 @@ description() -> "Authentication by HTTP API".
 authenticate(#http_request{method = Method,
                            url    = Url,
                            params = Params},
-             ClientInfo, HttpOpts, RetryOpts) ->
-   request(Method, Url, feedvar(Params, ClientInfo), HttpOpts, RetryOpts).
+             ClientInfo, HttpHeaders, HttpOpts, RetryOpts) ->
+   request(Method, Url, feedvar(Params, ClientInfo), HttpHeaders, HttpOpts, RetryOpts).
 
--spec(is_superuser(maybe(#http_request{}), emqx_types:client(), list(), list()) -> boolean()).
-is_superuser(undefined, _ClientInfo, _HttpOpts, _RetryOpts) ->
+-spec(is_superuser(maybe(#http_request{}), emqx_types:client(), list(), list(), list()) -> boolean()).
+is_superuser(undefined, _ClientInfo, _HttpHeaders, _HttpOpts, _RetryOpts) ->
     false;
 is_superuser(#http_request{method = Method,
                            url    = Url,
                            params = Params},
-             ClientInfo, HttpOpts, RetryOpts) ->
-    case request(Method, Url, feedvar(Params, ClientInfo), HttpOpts, RetryOpts) of
+             ClientInfo, HttpHeaders, HttpOpts, RetryOpts) ->
+    case request(Method, Url, feedvar(Params, ClientInfo), HttpHeaders, HttpOpts, RetryOpts) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
         {error, Error}     -> ?LOG(error, "Request superuser url ~s, error: ~p", [Url, Error]),

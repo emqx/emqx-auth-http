@@ -66,6 +66,18 @@ end}.
    {backoff, cuttlefish:conf_get("auth.http.request.retry_backoff", Conf)}]
 end}.
 
+{mapping, "auth.http.header.$field", "emqx_auth_http.headers", [
+  {datatype, string}
+]}.
+
+{translation, "emqx_auth_http.headers", fun(Conf) ->
+  lists:map(
+      fun({["auth", "http", "header", Field], Value}) ->
+          {Field, Value}
+      end,
+      cuttlefish_variable:filter_by_prefix("auth.http.header", Conf))
+end}.
+
 {mapping, "auth.http.auth_req", "emqx_auth_http.auth_req", [
   {datatype, string}
 ]}.
