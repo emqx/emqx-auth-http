@@ -16,7 +16,7 @@
 
 -module(emqx_auth_http_cli).
 
--export([ request/5
+-export([ request/6
         , feedvar/2
         , feedvar/3
         ]).
@@ -25,12 +25,12 @@
 %% HTTP Request
 %%--------------------------------------------------------------------
 
-request(get, Url, Params, HttpOpts, RetryOpts) ->
-    Req = {Url ++ "?" ++ cow_qs:qs(bin_kw(Params)), []},
+request(get, Url, Params, HttpHeaders, HttpOpts, RetryOpts) ->
+    Req = {Url ++ "?" ++ cow_qs:qs(bin_kw(Params)), HttpHeaders},
     reply(request_(get, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts));
 
-request(post, Url, Params, HttpOpts, RetryOpts) ->
-    Req = {Url, [], "application/x-www-form-urlencoded", cow_qs:qs(bin_kw(Params))},
+request(post, Url, Params, HttpHeaders, HttpOpts, RetryOpts) ->
+    Req = {Url, HttpHeaders, "application/x-www-form-urlencoded", cow_qs:qs(bin_kw(Params))},
     reply(request_(post, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts)).
 
 request_(Method, Req, HTTPOpts, Opts, RetryOpts = #{times := Times,
