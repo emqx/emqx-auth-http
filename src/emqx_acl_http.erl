@@ -24,7 +24,7 @@
 -logger_header("[ACL http]").
 
 -import(emqx_auth_http_cli,
-        [ request/5
+        [ request/6
         , feedvar/2
         ]).
 
@@ -51,9 +51,10 @@ do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Conf
     ok;
 do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req    := AclReq,
                                                       http_opts  := HttpOpts,
-                                                      retry_opts := RetryOpts}) ->
+                                                      retry_opts := RetryOpts,
+                                                      headers    := Headers}) ->
     ClientInfo1 = ClientInfo#{access => access(PubSub), topic => Topic},
-    case check_acl_request(AclReq, ClientInfo1, HttpOpts, RetryOpts) of
+    case check_acl_request(AclReq, ClientInfo1, Headers, HttpOpts, RetryOpts) of
         {ok, 200, "ignore"} -> ok;
         {ok, 200, _Body}    -> {stop, allow};
         {ok, _Code, _Body}  -> {stop, deny};
@@ -84,8 +85,8 @@ return_with(Fun, Result) ->
 check_acl_request(#http_request{method = Method,
                                 url    = Url,
                                 params = Params},
-                  ClientInfo, HttpOpts, RetryOpts) ->
-    request(Method, Url, feedvar(Params, ClientInfo), HttpOpts, RetryOpts).
+                  ClientInfo, Headers, HttpOpts, RetryOpts) ->
+    request(Method, Url, feedvar(Params, ClientInfo), Headers, HttpOpts, RetryOpts).
 
 access(subscribe) -> 1;
 access(publish)   -> 2.

@@ -54,9 +54,11 @@ load_acl_hook(AclReq) ->
     ok = emqx_acl_http:register_metrics(),
     HttpOpts = application:get_env(?APP, http_opts, []),
     RetryOpts = application:get_env(?APP, retry_opts, []),
+    Headers = application:get_env(?APP, headers, []),
     Params = #{acl_req    => AclReq,
                http_opts  => HttpOpts,
-               retry_opts => maps:from_list(RetryOpts)},
+               retry_opts => maps:from_list(RetryOpts),
+               headers    => Headers},
     emqx:hook('client.check_acl', fun emqx_acl_http:check_acl/5, [Params]).
 
 stop(_State) ->
