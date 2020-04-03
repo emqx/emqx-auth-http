@@ -13,25 +13,25 @@
                {<<"access">>, <<"1">>},
                {<<"topic">>, <<"users/testuser/1">>},
                {<<"ipaddr">>, <<"127.0.0.1">>},
-               {<<"mountpoint">>, <<"undefined">>}],
+               {<<"mountpoint">>, <<"null">>}],
               [{<<"username">>, <<"xyz">>},
                {<<"clientid">>, <<"client2">>},
                {<<"access">>, <<"2">>},
                {<<"topic">>, <<"a/b/c">>},
                {<<"ipaddr">>, <<"192.168.1.3">>},
-               {<<"mountpoint">>, <<"undefined">>}],
+               {<<"mountpoint">>, <<"null">>}],
               [{<<"username">>, <<"testuser1">>},
                {<<"clientid">>, <<"client1">>},
                {<<"access">>, <<"2">>},
                {<<"topic">>, <<"topic">>},
                {<<"ipaddr">>, <<"127.0.0.1">>},
-               {<<"mountpoint">>, <<"undefined">>}],
+               {<<"mountpoint">>, <<"null">>}],
               [{<<"username">>, <<"testuser2">>},
                {<<"clientid">>, <<"client2">>},
                {<<"access">>, <<"1">>},
                {<<"topic">>, <<"topic">>},
                {<<"ipaddr">>, <<"127.0.0.1">>},
-               {<<"mountpoint">>, <<"undefined">>}]]).
+               {<<"mountpoint">>, <<"null">>}]]).
 
 -define(AUTH, [[{<<"clientid">>, <<"client1">>},
                 {<<"username">>, <<"testuser1">>},
@@ -115,7 +115,7 @@ check(_Params, []) ->
     %ct:pal("check auth_result: deny~n"),
     deny;
 check(Params, [ConfRecord|T]) ->
-    %ct:pal("Params: ~p, ConfRecord:~p ~n", [Params, ConfRecord]),
+    ct:pal("Params: ~p, ConfRecord:~p ~n", [Params, ConfRecord]),
     case match_config(Params, ConfRecord) of
         not_match ->
             check(Params, T);
