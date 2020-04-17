@@ -25,7 +25,7 @@
 -logger_header("[Auth http]").
 
 -import(emqx_auth_http_cli,
-        [ request/6
+        [ request/7
         , feedvar/2
         ]).
 
@@ -76,19 +76,21 @@ description() -> "Authentication by HTTP API".
 %%--------------------------------------------------------------------
 
 authenticate(#http_request{method = Method,
+                           content_type = ContentType,
                            url    = Url,
                            params = Params},
              ClientInfo, HttpHeaders, HttpOpts, RetryOpts) ->
-   request(Method, Url, feedvar(Params, ClientInfo), HttpHeaders, HttpOpts, RetryOpts).
+   request(Method, ContentType, Url, feedvar(Params, ClientInfo), HttpHeaders, HttpOpts, RetryOpts).
 
 -spec(is_superuser(maybe(#http_request{}), emqx_types:client(), list(), list(), list()) -> boolean()).
 is_superuser(undefined, _ClientInfo, _HttpHeaders, _HttpOpts, _RetryOpts) ->
     false;
 is_superuser(#http_request{method = Method,
+                           content_type = ContentType,
                            url    = Url,
                            params = Params},
              ClientInfo, HttpHeaders, HttpOpts, RetryOpts) ->
-    case request(Method, Url, feedvar(Params, ClientInfo), HttpHeaders, HttpOpts, RetryOpts) of
+    case request(Method, ContentType, Url, feedvar(Params, ClientInfo), HttpHeaders, HttpOpts, RetryOpts) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
         {error, Error}     -> ?LOG(error, "Request superuser url ~s, error: ~p", [Url, Error]),
