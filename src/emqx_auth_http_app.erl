@@ -86,7 +86,7 @@ r(undefined) ->
     undefined;
 r(Config) ->
     Method = proplists:get_value(method, Config, post),
-    ContentType = proplists:get_value(content_type, Config, json),
+    ContentType = proplists:get_value(content_type, Config, 'x-www-form-urlencoded'),
     Url    = proplists:get_value(url, Config),
     Params = proplists:get_value(params, Config),
     #http_request{method = Method, content_type = ContentType, url = Url, params = Params}.

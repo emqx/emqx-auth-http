@@ -87,7 +87,6 @@ check_acl_request(#http_request{method = Method,
                                 url    = Url,
                                 params = Params},
                   ClientInfo, Headers, HttpOpts, RetryOpts) ->
-    ct:print("================~p~n", [ContentType]),
     request(Method, ContentType, Url, feedvar(Params, ClientInfo), Headers, HttpOpts, RetryOpts).
 
 access(subscribe) -> 1;
