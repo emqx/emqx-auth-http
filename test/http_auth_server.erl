@@ -65,6 +65,27 @@
            , descr  => "Check acl"
            }).
 
+-rest_api(#{ name   => auth
+           , method => 'POST'
+           , path   => "/mqtt/auth"
+           , func   => authenticate
+           , descr  => "Authenticate user access permission"
+           }).
+
+-rest_api(#{ name   => is_superuser
+           , method => 'POST'
+           , path   => "/mqtt/superuser"
+           , func   => is_superuser
+           , descr  => "Is super user"
+           }).
+
+-rest_api(#{ name   => acl
+           , method => 'POST'
+           , path   => "/mqtt/acl"
+           , func   => check_acl
+           , descr  => "Check acl"
+           }).
+
 -export([ authenticate/2
         , is_superuser/2
         , check_acl/2

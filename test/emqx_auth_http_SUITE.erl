@@ -84,14 +84,14 @@ set_special_configs(emqx_auth_http, Grp) ->
     {AuthReq1, SuprReq1, AclReq1} =
         case Grp of
             http ->
-                {AuthReq#{method := get},
-                 SuprReq#{method := get},
-                 AclReq #{method := get}};
+                {AuthReq#{method := get, url := "http://127.0.0.1:8991/mqtt/auth"},
+                 SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := "http://127.0.0.1:8991/mqtt/superuser"},
+                 AclReq #{method := post, content_type := json, url := "http://127.0.0.1:8991/mqtt/acl"}};
             https ->
                 set_https_client_opts(),
                 {AuthReq#{method := get, url := "https://127.0.0.1:8991/mqtt/auth"},
-                 SuprReq#{method := get, url := "https://127.0.0.1:8991/mqtt/superuser"},
-                 AclReq #{method := get, url := "https://127.0.0.1:8991/mqtt/acl"}}
+                 SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := "https://127.0.0.1:8991/mqtt/superuser"},
+                 AclReq #{method := post, content_type := json, url := "https://127.0.0.1:8991/mqtt/acl"}}
         end,
     application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq1)),
     application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq1)),
