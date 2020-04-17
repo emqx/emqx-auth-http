@@ -87,6 +87,11 @@ end}.
   {datatype, {enum, [post, get]}}
 ]}.
 
+{mapping, "auth.http.auth_req.content_type", "emqx_auth_http.auth_req", [
+  {default, 'x-www-form-urlencoded'},
+  {datatype, {enum, [json, 'x-www-form-urlencoded']}}
+]}.
+
 {mapping, "auth.http.auth_req.params", "emqx_auth_http.auth_req", [
   {datatype, string}
 ]}.
@@ -95,6 +100,7 @@ end}.
   Params = cuttlefish:conf_get("auth.http.auth_req.params", Conf),
   [{url, cuttlefish:conf_get("auth.http.auth_req", Conf)},
    {method, cuttlefish:conf_get("auth.http.auth_req.method", Conf)},
+   {content_type, cuttlefish:conf_get("auth.http.auth_req.content_type", Conf)},
    {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
 end}.
 
@@ -107,6 +113,11 @@ end}.
   {datatype, {enum, [post, get]}}
 ]}.
 
+{mapping, "auth.http.super_req.content_type", "emqx_auth_http.super_req", [
+  {default, 'x-www-form-urlencoded'},
+  {datatype, {enum, [json, 'x-www-form-urlencoded']}}
+]}.
+
 {mapping, "auth.http.super_req.params", "emqx_auth_http.super_req", [
   {datatype, string}
 ]}.
@@ -116,6 +127,7 @@ end}.
     undefined -> cuttlefish:unset();
     Url -> Params = cuttlefish:conf_get("auth.http.super_req.params", Conf),
            [{url, Url}, {method, cuttlefish:conf_get("auth.http.super_req.method", Conf)},
+            {content_type, cuttlefish:conf_get("auth.http.super_req.content_type", Conf)},
             {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
   end
 end}.
@@ -130,6 +142,11 @@ end}.
   {datatype, {enum, [post, get]}}
 ]}.
 
+{mapping, "auth.http.acl_req.content_type", "emqx_auth_http.acl_req", [
+  {default, 'x-www-form-urlencoded'},
+  {datatype, {enum, [json, 'x-www-form-urlencoded']}}
+]}.
+
 {mapping, "auth.http.acl_req.params", "emqx_auth_http.acl_req", [
   {datatype, string}
 ]}.
@@ -139,6 +156,7 @@ end}.
     undefined -> cuttlefish:unset();
     Url -> Params = cuttlefish:conf_get("auth.http.acl_req.params", Conf),
            [{url, Url}, {method, cuttlefish:conf_get("auth.http.acl_req.method", Conf)},
+            {content_type, cuttlefish:conf_get("auth.http.acl_req.content_type", Conf)},
             {params, [list_to_tuple(string:tokens(S, "=")) || S <- string:tokens(Params, ",")]}]
   end
 end}.

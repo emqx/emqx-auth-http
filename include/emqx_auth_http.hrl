@@ -1,7 +1,7 @@
 
 -define(APP, emqx_auth_http).
 
--record(http_request, {method = post, url, params}).
+-record(http_request, {method = post, content_type, url, params}).
 
 -record(auth_metrics, {
         success = 'client.auth.success',
