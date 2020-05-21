@@ -50,10 +50,11 @@ check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
         {ok, 200, Body}  ->
             emqx_metrics:inc(?AUTH_METRICS(success)),
             IsSuperuser = is_superuser(SuperReq, ClientInfo, Headers, HttpOpts, RetryOpts),
-            {stop, AuthResult#{is_superuser => IsSuperuser,
-                                auth_result => success,
-                                anonymous   => false,
-                                mountpoint  => mountpoint(Body, ClientInfo)}};
+            {stop, AuthResult#{is_superuser  => IsSuperuser,
+                                auth_result  => success,
+                                anonymous    => false,
+                                mountpoint   => mountpoint(Body, ClientInfo),
+                                topic_prefix => topic_prefix(Body, ClientInfo)}};
         {ok, Code, _Body} ->
             ?LOG(error, "Deny connection from url: ~s, response http code: ~p",
                  [AuthReq#http_request.url, Code]),
@@ -103,6 +104,14 @@ mountpoint(Body, #{mountpoint := Mountpoint}) ->
         {ok, Json} when is_map(Json) ->
             maps:get(<<"mountpoint">>, Json, Mountpoint);
         {ok, _NotMap} -> Mountpoint
+    end.
+
+topic_prefix(Body, #{topic_prefix := TopicPrefix}) ->
+    case emqx_json:safe_decode(iolist_to_binary(Body), [return_maps]) of
+        {error, _} -> TopicPrefix;
+        {ok, Json} when is_map(Json) ->
+            maps:get(<<"topic_prefix">>, Json, TopicPrefix);
+        {ok, _NotMap} -> TopicPrefix
     end.
 
 http_to_connack_error(400) -> bad_username_or_password;
