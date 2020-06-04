@@ -37,7 +37,7 @@
 
 -spec(register_metrics() -> ok).
 register_metrics() ->
-    lists:foreach(fun emqx_metrics:new/1, ?AUTH_METRICS).
+    lists:foreach(fun emqx_metrics:ensure/1, ?AUTH_METRICS).
 
 check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
                                 super_req  := SuperReq,
