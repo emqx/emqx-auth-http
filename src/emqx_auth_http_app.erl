@@ -48,7 +48,7 @@ load_auth_hook(AuthReq) ->
                http_opts  => HttpOpts,
                retry_opts => maps:from_list(RetryOpts),
                headers    => Headers},
-    emqx:hook('client.authenticate', fun emqx_auth_http:check/3, [Params]).
+    emqx:hook('client.authenticate', {emqx_auth_http, check, [Params]}).
 
 load_acl_hook(AclReq) ->
     ok = emqx_acl_http:register_metrics(),
@@ -59,11 +59,11 @@ load_acl_hook(AclReq) ->
                http_opts  => HttpOpts,
                retry_opts => maps:from_list(RetryOpts),
                headers    => Headers},
-    emqx:hook('client.check_acl', fun emqx_acl_http:check_acl/5, [Params]).
+    emqx:hook('client.check_acl', {emqx_acl_http, check_acl, [Params]}).
 
 stop(_State) ->
-    emqx:unhook('client.authenticate', fun emqx_auth_http:check/3),
-    emqx:unhook('client.check_acl', fun emqx_acl_http:check_acl/5).
+    emqx:unhook('client.authenticate', {emqx_auth_http, check}),
+    emqx:unhook('client.check_acl', {emqx_acl_http, check_acl}).
 
 %%--------------------------------------------------------------------
 %% Dummy supervisor
@@ -89,5 +89,15 @@ r(Config) ->
     ContentType = proplists:get_value(content_type, Config, 'x-www-form-urlencoded'),
     Url    = proplists:get_value(url, Config),
     Params = proplists:get_value(params, Config),
-    #http_request{method = Method, content_type = ContentType, url = Url, params = Params}.
+    #http_request{method = Method, content_type = ContentType, url = Url, params = Params, options = inet(Url)}.
 
+inet(Url) ->
+    case uri_string:parse(Url) of
+        #{host := Host} ->
+            case inet:parse_address(Host) of
+                {ok, Ip} when tuple_size(Ip) =:= 8 ->
+                    [{ipv6_host_with_brackets, true}, {socket_opts, [{ipfamily, inet6}]}];
+                _ -> []
+            end;
+        _ -> []
+    end.

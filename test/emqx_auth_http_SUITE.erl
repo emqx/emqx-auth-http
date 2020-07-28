@@ -14,13 +14,11 @@
 
 -module(emqx_auth_http_SUITE).
 
--compile(nowarn_export_all).
 -compile(export_all).
+-compile(nowarn_export_all).
 
 -include_lib("emqx/include/emqx.hrl").
-
 -include_lib("common_test/include/ct.hrl").
-
 -include_lib("eunit/include/eunit.hrl").
 
 -define(APP, emqx_auth_http).
@@ -32,79 +30,66 @@
 -define(USER(ClientId, Username, Protocol, Peerhost, Zone, Mountpoint),
         #{clientid => ClientId, username => Username, protocol => Protocol,
           peerhost => Peerhost, zone => Zone, mountpoint => Mountpoint}).
+
+%%--------------------------------------------------------------------
+%% Setups
+%%--------------------------------------------------------------------
+
 all() ->
-    [{group, http},
-     {group, https}].
+    [{group, http_inet},
+     {group, http_inet6},
+     {group, https_inet},
+     {group, https_inet6}].
 
 groups() ->
-    [{http, [sequence],
-      [ t_check_acl
-      , t_check_auth
-      , t_sub_pub
-      , t_comment_config]},
-     {https, [sequence],
-      [ t_check_acl
-      , t_check_auth
-      , t_sub_pub]}
-    ].
+    Cases = emqx_ct:all(?MODULE),
+    [{Name, Cases} || Name <- [http_inet, http_inet6, https_inet, https_inet6]].
 
-init_per_group(http, Config) ->
-    http_auth_server:start_http(),
-    emqx_ct_helpers:start_apps([emqx_auth_http], fun http_speical_configs/1),
-    Config;
-init_per_group(https, Config) ->
-    http_auth_server:start_https(),
-    emqx_ct_helpers:start_apps([emqx_auth_http], fun https_special_configs/1),
-    Config.
+init_per_group(GrpName, Cfg) ->
+    [Schema, Inet] = [list_to_atom(X) || X <- string:tokens(atom_to_list(GrpName), "_")],
+    http_auth_server:start(Schema, Inet),
+    Fun = fun(App) -> set_special_configs(App, Schema, Inet) end,
+    emqx_ct_helpers:start_apps([emqx_auth_http], Fun),
+    Cfg.
 
-end_per_group(http, _Config) ->
-    http_auth_server:stop_http(),
-    emqx_ct_helpers:stop_apps([emqx_auth_http, emqx]);
-end_per_group(https, _Config) ->
-    http_auth_server:stop_https(),
+end_per_group(_GrpName, _Cfg) ->
+    http_auth_server:stop(),
     emqx_ct_helpers:stop_apps([emqx_auth_http, emqx]).
 
-http_speical_configs(App) ->
-    set_special_configs(App, http).
-
-https_special_configs(App) ->
-    set_special_configs(App, https).
-
-set_special_configs(emqx, _Grp) ->
+set_special_configs(emqx, _Schmea, _Inet) ->
     application:set_env(emqx, allow_anonymous, true),
     application:set_env(emqx, enable_acl_cache, false),
     LoadedPluginPath = filename:join(["test", "emqx_SUITE_data", "loaded_plugins"]),
     application:set_env(emqx, plugins_loaded_file,
                         emqx_ct_helpers:deps_path(emqx, LoadedPluginPath));
 
-set_special_configs(emqx_auth_http, Grp) ->
+set_special_configs(emqx_auth_http, Schema, Inet) ->
     AuthReq = maps:from_list(application:get_env(emqx_auth_http, auth_req, [])),
     SuprReq = maps:from_list(application:get_env(emqx_auth_http, super_req, [])),
     AclReq  = maps:from_list(application:get_env(emqx_auth_http, acl_req, [])),
-    {AuthReq1, SuprReq1, AclReq1} =
-        case Grp of
-            http ->
-                {AuthReq#{method := get, url := "http://127.0.0.1:8991/mqtt/auth"},
-                 SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := "http://127.0.0.1:8991/mqtt/superuser"},
-                 AclReq #{method := post, content_type := json, url := "http://127.0.0.1:8991/mqtt/acl"}};
-            https ->
-                set_https_client_opts(),
-                {AuthReq#{method := get, url := "https://127.0.0.1:8991/mqtt/auth"},
-                 SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := "https://127.0.0.1:8991/mqtt/superuser"},
-                 AclReq #{method := post, content_type := json, url := "https://127.0.0.1:8991/mqtt/acl"}}
-        end,
+    SvrAddr = http_server_host(Schema, Inet),
+
+    AuthReq1 = AuthReq#{method := get, url := SvrAddr ++ "/mqtt/auth"},
+    SuprReq1 = SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := SvrAddr ++ "/mqtt/superuser"},
+    AclReq1  = AclReq #{method := post, content_type := json, url := SvrAddr ++ "/mqtt/acl"},
+
+    Schema =:= https andalso set_https_client_opts(),
+
     application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq1)),
     application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq1)),
-    application:set_env(emqx_auth_http, acl_req, maps:to_list(AclReq1));
-
-set_special_configs(_App, _Grp) ->
-    ok.
+    application:set_env(emqx_auth_http, acl_req, maps:to_list(AclReq1)).
 
 %% @private
 set_https_client_opts() ->
     HttpOpts = maps:from_list(application:get_env(emqx_auth_http, http_opts, [])),
     HttpOpts1 = HttpOpts#{ssl => emqx_ct_helpers:client_ssl_twoway()},
     application:set_env(emqx_auth_http, http_opts, maps:to_list(HttpOpts1)).
+
+%% @private
+http_server_host(http, inet) -> "http://127.0.0.1:8991";
+http_server_host(http, inet6) -> "http://[::1]:8991";
+http_server_host(https, inet) -> "https://127.0.0.1:8991";
+http_server_host(https, inet6) -> "https://[::1]:8991".
 
 %%------------------------------------------------------------------------------
 %% Testcases
