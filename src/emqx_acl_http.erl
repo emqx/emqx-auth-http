@@ -24,7 +24,7 @@
 -logger_header("[ACL http]").
 
 -import(emqx_auth_http_cli,
-        [ request/7
+        [ request/8
         , feedvar/2
         ]).
 
@@ -79,12 +79,13 @@ inc_metrics({stop, deny}) ->
 return_with(Fun, Result) ->
     Fun(Result), Result.
 
-check_acl_request(#http_request{method = Method,
+check_acl_request(#http_request{url = Url,
+                                method = Method,
                                 content_type = ContentType,
-                                url    = Url,
-                                params = Params},
+                                params = Params,
+                                options = Options},
                   ClientInfo, Headers, HttpOpts, RetryOpts) ->
-    request(Method, ContentType, Url, feedvar(Params, ClientInfo), Headers, HttpOpts, RetryOpts).
+    request(Method, ContentType, Url, feedvar(Params, ClientInfo), Headers, HttpOpts, Options, RetryOpts).
 
 access(subscribe) -> 1;
 access(publish)   -> 2.

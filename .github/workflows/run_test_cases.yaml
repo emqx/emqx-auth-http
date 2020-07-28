@@ -20,12 +20,7 @@ jobs:
                   make -C /emqx_auth_http ct
                   make -C /emqx_auth_http cover"
             - uses: actions/upload-artifact@v1
-              if: always()
+              if: failure()
               with:
                 name: logs
                 path: _build/test/logs
-            - uses: actions/upload-artifact@v1
-              with:
-                name: cover
-                path: _build/test/cover
-
