@@ -16,7 +16,7 @@
 
 -module(emqx_auth_http_cli).
 
--export([ request/7
+-export([ request/8
         , feedvar/2
         , feedvar/3
         ]).
@@ -25,17 +25,17 @@
 %% HTTP Request
 %%--------------------------------------------------------------------
 
-request(get, _ContentType, Url, Params, HttpHeaders, HttpOpts, RetryOpts) ->
+request(get, _ContentType, Url, Params, HttpHeaders, HttpOpts, Options, RetryOpts) ->
     Req = {Url ++ "?" ++ cow_qs:qs(bin_kw(Params)), HttpHeaders},
-    reply(request_(get, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts));
+    reply(request_(get, Req, [{autoredirect, true} | HttpOpts], Options, RetryOpts));
 
-request(post, 'x-www-form-urlencoded', Url, Params, HttpHeaders, HttpOpts, RetryOpts) ->
+request(post, 'x-www-form-urlencoded', Url, Params, HttpHeaders, HttpOpts, Options, RetryOpts) ->
     Req = {Url, HttpHeaders, "application/x-www-form-urlencoded", cow_qs:qs(bin_kw(Params))},
-    reply(request_(post, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts));
+    reply(request_(post, Req, [{autoredirect, true} | HttpOpts], Options, RetryOpts));
 
-request(post, json, Url, Params, HttpHeaders, HttpOpts, RetryOpts) ->
+request(post, json, Url, Params, HttpHeaders, HttpOpts, Options, RetryOpts) ->
     Req = {Url, HttpHeaders, "application/json", emqx_json:encode(bin_kw(Params))},
-    reply(request_(post, Req, [{autoredirect, true} | HttpOpts], [], RetryOpts)).
+    reply(request_(post, Req, [{autoredirect, true} | HttpOpts], Options, RetryOpts)).
 
 request_(Method, Req, HTTPOpts, Opts, RetryOpts = #{times := Times,
                                                     interval := Interval,
