@@ -65,18 +65,18 @@ set_special_configs(emqx, _Schmea, _Inet) ->
 
 set_special_configs(emqx_auth_http, Schema, Inet) ->
     AuthReq = maps:from_list(application:get_env(emqx_auth_http, auth_req, [])),
-    SuprReq = maps:from_list(application:get_env(emqx_auth_http, super_req, [])),
+    %SuprReq = maps:from_list(application:get_env(emqx_auth_http, super_req, [])),
     AclReq  = maps:from_list(application:get_env(emqx_auth_http, acl_req, [])),
     SvrAddr = http_server_host(Schema, Inet),
 
     AuthReq1 = AuthReq#{method := get, url := SvrAddr ++ "/mqtt/auth"},
-    SuprReq1 = SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := SvrAddr ++ "/mqtt/superuser"},
+    %SuprReq1 = SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := SvrAddr ++ "/mqtt/superuser"},
     AclReq1  = AclReq #{method := post, content_type := json, url := SvrAddr ++ "/mqtt/acl"},
 
     Schema =:= https andalso set_https_client_opts(),
 
     application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq1)),
-    application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq1)),
+    %application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq1)),
     application:set_env(emqx_auth_http, acl_req, maps:to_list(AclReq1)).
 
 %% @private
