@@ -64,32 +64,34 @@ set_special_configs(emqx, _Schmea, _Inet) ->
                         emqx_ct_helpers:deps_path(emqx, LoadedPluginPath));
 
 set_special_configs(emqx_auth_http, Schema, Inet) ->
-    AuthReq = maps:from_list(application:get_env(emqx_auth_http, auth_req, [])),
-    SuprReq = maps:from_list(application:get_env(emqx_auth_http, super_req, [])),
-    AclReq  = maps:from_list(application:get_env(emqx_auth_http, acl_req, [])),
-    SvrAddr = http_server_host(Schema, Inet),
+    {Host, Port} = http_server(Inet),
 
-    AuthReq1 = AuthReq#{method := get, url := SvrAddr ++ "/mqtt/auth"},
-    SuprReq1 = SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := SvrAddr ++ "/mqtt/superuser"},
-    AclReq1  = AclReq #{method := post, content_type := json, url := SvrAddr ++ "/mqtt/acl"},
+    AuthReq = #{method => get,
+                path => "/mqtt/auth",
+                content_type => <<"application/x-www-form-urlencoded">>,
+                params => [{"clientid", "%c"}, {"username", "%u"}, {"password", "%P"}]},
+    AclReq = #{method => post,
+               path => "/mqtt/acl",
+               content_type => <<"application/json">>,
+               params => [{"access", "%A"}, {"username", "%u"}, {"clientid", "%c"}, {"ipaddr", "%a"}, {"topic", "%t"}, {"mountpoint", "%m"}]},
 
     Schema =:= https andalso set_https_client_opts(),
 
-    application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq1)),
-    application:set_env(emqx_auth_http, super_req, maps:to_list(SuprReq1)),
-    application:set_env(emqx_auth_http, acl_req, maps:to_list(AclReq1)).
+    application:set_env(emqx_auth_http, host, Host),
+    application:set_env(emqx_auth_http, port, Port),
+
+    application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq)),
+    application:set_env(emqx_auth_http, acl_req, maps:to_list(AclReq)).
 
 %% @private
 set_https_client_opts() ->
-    HttpOpts = maps:from_list(application:get_env(emqx_auth_http, http_opts, [])),
-    HttpOpts1 = HttpOpts#{ssl => emqx_ct_helpers:client_ssl_twoway()},
-    application:set_env(emqx_auth_http, http_opts, maps:to_list(HttpOpts1)).
+    TransportOpts = emqx_ct_helpers:client_ssl_twoway(),
+    application:set_env(emqx_auth_http, transport_opts, TransportOpts),
+    application:set_env(emqx_auth_http, transport, ssl).
 
 %% @private
-http_server_host(http, inet) -> "http://127.0.0.1:8991";
-http_server_host(http, inet6) -> "http://[::1]:8991";
-http_server_host(https, inet) -> "https://127.0.0.1:8991";
-http_server_host(https, inet6) -> "https://[::1]:8991".
+http_server(inet) -> {"127.0.0.1", 8991};
+http_server(inet6) -> {"[::1]", 8991}.
 
 %%------------------------------------------------------------------------------
 %% Testcases

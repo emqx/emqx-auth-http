@@ -33,32 +33,22 @@
 %%--------------------------------------------------------------------
 
 start(_StartType, _StartArgs) ->
+    {ok, PoolOpts} = application:get_env(?APP, pool_opts),
+    {ok, Sup} = emqx_http_client_sup:start_link(?APP, inet(PoolOpts)),
     with_env(auth_req, fun load_auth_hook/1),
     with_env(acl_req,  fun load_acl_hook/1),
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    {ok, Sup}.
 
 load_auth_hook(AuthReq) ->
     ok = emqx_auth_http:register_metrics(),
     SuperReq = r(application:get_env(?APP, super_req, undefined)),
-    HttpOpts = application:get_env(?APP, http_opts, []),
-    RetryOpts = application:get_env(?APP, retry_opts, []),
-    Headers = application:get_env(?APP, headers, []),
     Params = #{auth_req   => AuthReq,
-               super_req  => SuperReq,
-               http_opts  => HttpOpts,
-               retry_opts => maps:from_list(RetryOpts),
-               headers    => Headers},
+               super_req  => SuperReq},
     emqx:hook('client.authenticate', {emqx_auth_http, check, [Params]}).
 
 load_acl_hook(AclReq) ->
     ok = emqx_acl_http:register_metrics(),
-    HttpOpts = application:get_env(?APP, http_opts, []),
-    RetryOpts = application:get_env(?APP, retry_opts, []),
-    Headers = application:get_env(?APP, headers, []),
-    Params = #{acl_req    => AclReq,
-               http_opts  => HttpOpts,
-               retry_opts => maps:from_list(RetryOpts),
-               headers    => Headers},
+    Params = #{acl_req => AclReq},
     emqx:hook('client.check_acl', {emqx_acl_http, check_acl, [Params]}).
 
 stop(_State) ->
@@ -85,19 +75,21 @@ with_env(Par, Fun) ->
 r(undefined) ->
     undefined;
 r(Config) ->
+    Headers = application:get_env(?APP, headers, []),
     Method = proplists:get_value(method, Config, post),
-    ContentType = proplists:get_value(content_type, Config, 'x-www-form-urlencoded'),
-    Url    = proplists:get_value(url, Config),
+    Path    = proplists:get_value(path, Config),
+    NewHeaders = [{<<"content_type">>, proplists:get_value(content_type, Config, <<"application/x-www-form-urlencoded">>)} | Headers],
     Params = proplists:get_value(params, Config),
-    #http_request{method = Method, content_type = ContentType, url = Url, params = Params, options = inet(Url)}.
+    RequestTimeout = application:get_env(?APP, request_timeout, []),
+    #http_request{method = Method, path = Path, headers = NewHeaders, params = Params, request_timeout = RequestTimeout}.
 
-inet(Url) ->
-    case uri_string:parse(Url) of
-        #{host := Host} ->
-            case inet:parse_address(Host) of
-                {ok, Ip} when tuple_size(Ip) =:= 8 ->
-                    [{ipv6_host_with_brackets, true}, {socket_opts, [{ipfamily, inet6}]}];
-                _ -> []
-            end;
-        _ -> []
+inet(PoolOpts) ->
+    Host = proplists:get_value(host, PoolOpts),
+    case inet:parse_address(Host) of
+        {ok, IP} when tuple_size(IP) =:= 8 ->
+            TransOpts = proplists:get_value(transport_opts, PoolOpts, []),
+            NewPoolOpts = proplists:delete(transport_opts, PoolOpts),
+            [{transport_otps, [inet6 | TransOpts]} | NewPoolOpts];
+        _ ->
+            PoolOpts
     end.

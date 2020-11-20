@@ -24,7 +24,7 @@
 -logger_header("[ACL http]").
 
 -import(emqx_auth_http_cli,
-        [ request/8
+        [ request/5
         , feedvar/2
         ]).
 
@@ -48,18 +48,15 @@ check_acl(ClientInfo, PubSub, Topic, AclResult, State) ->
 
 do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;
-do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req    := AclReq,
-                                                      http_opts  := HttpOpts,
-                                                      retry_opts := RetryOpts,
-                                                      headers    := Headers}) ->
+do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req := AclReq}) ->
     ClientInfo1 = ClientInfo#{access => access(PubSub), topic => Topic},
-    case check_acl_request(AclReq, ClientInfo1, Headers, HttpOpts, RetryOpts) of
-        {ok, 200, "ignore"} -> ok;
+    case check_acl_request(AclReq, ClientInfo1) of
+        {ok, 200, <<"ignore">>} -> ok;
         {ok, 200, _Body}    -> {stop, allow};
         {ok, _Code, _Body}  -> {stop, deny};
         {error, Error}      ->
-            ?LOG(error, "Request ACL url ~s, error: ~p",
-                 [AclReq#http_request.url, Error]),
+            ?LOG(error, "Request ACL path ~s, error: ~p",
+                 [AclReq#http_request.path, Error]),
             ok
     end.
 
@@ -79,13 +76,12 @@ inc_metrics({stop, deny}) ->
 return_with(Fun, Result) ->
     Fun(Result), Result.
 
-check_acl_request(#http_request{url = Url,
+check_acl_request(#http_request{path = Path,
                                 method = Method,
-                                content_type = ContentType,
+                                headers = Headers,
                                 params = Params,
-                                options = Options},
-                  ClientInfo, Headers, HttpOpts, RetryOpts) ->
-    request(Method, ContentType, Url, feedvar(Params, ClientInfo), Headers, HttpOpts, Options, RetryOpts).
+                                request_timeout = RequestTimeout}, ClientInfo) ->
+    request(Method, Path, Headers, feedvar(Params, ClientInfo), RequestTimeout).
 
 access(subscribe) -> 1;
 access(publish)   -> 2.
