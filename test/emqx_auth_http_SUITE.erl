@@ -64,21 +64,18 @@ set_special_configs(emqx, _Schmea, _Inet) ->
                         emqx_ct_helpers:deps_path(emqx, LoadedPluginPath));
 
 set_special_configs(emqx_auth_http, Schema, Inet) ->
-    {Host, Port} = http_server(Inet),
+    ServerAddr = http_server(Schema, Inet),
 
     AuthReq = #{method => get,
-                path => "/mqtt/auth",
+                url => ServerAddr ++ "/mqtt/auth",
                 content_type => <<"application/x-www-form-urlencoded">>,
                 params => [{"clientid", "%c"}, {"username", "%u"}, {"password", "%P"}]},
-    AclReq = #{method => post,
-               path => "/mqtt/acl",
+    AclReq = #{method => get,
+               url => ServerAddr ++ "/mqtt/acl",
                content_type => <<"application/json">>,
                params => [{"access", "%A"}, {"username", "%u"}, {"clientid", "%c"}, {"ipaddr", "%a"}, {"topic", "%t"}, {"mountpoint", "%m"}]},
 
     Schema =:= https andalso set_https_client_opts(),
-
-    application:set_env(emqx_auth_http, host, Host),
-    application:set_env(emqx_auth_http, port, Port),
 
     application:set_env(emqx_auth_http, auth_req, maps:to_list(AuthReq)),
     application:set_env(emqx_auth_http, acl_req, maps:to_list(AclReq)).
@@ -86,12 +83,14 @@ set_special_configs(emqx_auth_http, Schema, Inet) ->
 %% @private
 set_https_client_opts() ->
     TransportOpts = emqx_ct_helpers:client_ssl_twoway(),
-    application:set_env(emqx_auth_http, transport_opts, TransportOpts),
-    application:set_env(emqx_auth_http, transport, ssl).
+    {ok, PoolOpts} = application:get_env(emqx_auth_http, pool_opts),
+    application:set_env(emqx_auth_http, pool_opts, [{transport_opts, TransportOpts}, {transport, ssl} | PoolOpts]).
 
 %% @private
-http_server(inet) -> {"127.0.0.1", 8991};
-http_server(inet6) -> {"[::1]", 8991}.
+http_server(http, inet) -> "http://127.0.0.1:8991";
+http_server(http, inet6) -> "http://[::1]:8991";
+http_server(https, inet) -> "https://127.0.0.1:8991";
+http_server(https, inet6) -> "https://[::1]:8991".
 
 %%------------------------------------------------------------------------------
 %% Testcases

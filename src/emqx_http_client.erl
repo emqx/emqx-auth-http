@@ -134,7 +134,9 @@ open(State = #state{host = Host, port = Port, gun_opts = GunOpts}) ->
 gun_opts(Opts) ->
     gun_opts(Opts, #{retry => 5,
                      retry_timeout => 1000,
-                     connect_timeout => 5000}).
+                     connect_timeout => 5000,
+                     protocols => [http],
+                     http_opts => #{keepalive => infinity}}).
 
 gun_opts([], Acc) ->
     Acc;
