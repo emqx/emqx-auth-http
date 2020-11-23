@@ -70,7 +70,8 @@ set_special_configs(emqx_auth_http, Schema, Inet) ->
     SvrAddr = http_server_host(Schema, Inet),
 
     AuthReq1 = AuthReq#{method := get, url := SvrAddr ++ "/mqtt/auth"},
-    SuprReq1 = SuprReq#{method := post, content_type := 'x-www-form-urlencoded', url := SvrAddr ++ "/mqtt/superuser"},
+    SuprReq1 = SuprReq#{method => post, content_type => 'x-www-form-urlencoded', url => SvrAddr ++ "/mqtt/superuser",
+                        params => [{"clientid", "%c"}, {"username", "%u"}]},
     AclReq1  = AclReq #{method := post, content_type := json, url := SvrAddr ++ "/mqtt/acl"},
 
     Schema =:= https andalso set_https_client_opts(),
