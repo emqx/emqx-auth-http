@@ -1,0 +1,27 @@
+%% -*-: erlang -*-
+{"4.2.2",
+  [
+    {"4.2.1", [
+      {restart_application, emqx_auth_http},
+      {apply, {emqx_modules, refresh_module, [http_authentication]}},
+      {apply, {emqx_plugins, load, []}}
+    ]},
+    {"4.2.0", [
+      {restart_application, emqx_auth_http},
+      {apply, {emqx_modules, refresh_module, [http_authentication]}},
+      {apply, {emqx_plugins, load, []}}
+    ]}
+  ],
+  [
+    {"4.2.1", [
+      {restart_application, emqx_auth_http},
+      {apply, {emqx_modules, refresh_module, [http_authentication]}},
+      {apply, {emqx_plugins, load, []}}
+    ]},
+    {"4.2.0", [
+      {restart_application, emqx_auth_http},
+      {apply, {emqx_modules, refresh_module, [http_authentication]}},
+      {apply, {emqx_plugins, load, []}}
+    ]}
+  ]
+}.
