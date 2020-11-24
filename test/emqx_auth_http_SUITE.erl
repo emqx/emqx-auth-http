@@ -70,7 +70,7 @@ set_special_configs(emqx_auth_http, Schema, Inet) ->
                 url => ServerAddr ++ "/mqtt/auth",
                 content_type => <<"application/x-www-form-urlencoded">>,
                 params => [{"clientid", "%c"}, {"username", "%u"}, {"password", "%P"}]},
-    AclReq = #{method => get,
+    AclReq = #{method => post,
                url => ServerAddr ++ "/mqtt/acl",
                content_type => <<"application/json">>,
                params => [{"access", "%A"}, {"username", "%u"}, {"clientid", "%c"}, {"ipaddr", "%a"}, {"topic", "%t"}, {"mountpoint", "%m"}]},

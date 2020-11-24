@@ -25,7 +25,7 @@
 -logger_header("[Auth http]").
 
 -import(emqx_auth_http_cli,
-        [ request/5
+        [ request/6
         , feedvar/2
         ]).
 
@@ -40,13 +40,14 @@ register_metrics() ->
     lists:foreach(fun emqx_metrics:ensure/1, ?AUTH_METRICS).
 
 check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
-                                super_req  := SuperReq}) ->
-    case authenticate(AuthReq, ClientInfo) of
+                                super_req  := SuperReq,
+                                pool_name  := PoolName}) ->
+    case authenticate(PoolName, AuthReq, ClientInfo) of
         {ok, 200, <<"ignore">>} ->
             emqx_metrics:inc(?AUTH_METRICS(ignore)), ok;
         {ok, 200, Body}  ->
             emqx_metrics:inc(?AUTH_METRICS(success)),
-            IsSuperuser = is_superuser(SuperReq, ClientInfo),
+            IsSuperuser = is_superuser(PoolName, SuperReq, ClientInfo),
             {stop, AuthResult#{is_superuser => IsSuperuser,
                                 auth_result => success,
                                 anonymous   => false,
@@ -72,22 +73,22 @@ description() -> "Authentication by HTTP API".
 %% Requests
 %%--------------------------------------------------------------------
 
-authenticate(#http_request{path = Path,
-                           method = Method,
-                           headers = Headers,
-                           params = Params,
-                           request_timeout = RequestTimeout}, ClientInfo) ->
-   request(Method, Path, Headers, feedvar(Params, ClientInfo), RequestTimeout).
+authenticate(PoolName, #http_request{path = Path,
+                                     method = Method,
+                                     headers = Headers,
+                                     params = Params,
+                                     request_timeout = RequestTimeout}, ClientInfo) ->
+   request(PoolName, Method, Path, Headers, feedvar(Params, ClientInfo), RequestTimeout).
 
--spec(is_superuser(maybe(#http_request{}), emqx_types:client()) -> boolean()).
-is_superuser(undefined, _ClientInfo) ->
+-spec(is_superuser(atom(), maybe(#http_request{}), emqx_types:client()) -> boolean()).
+is_superuser(_PoolName, undefined, _ClientInfo) ->
     false;
-is_superuser(#http_request{path = Path,
-                           method = Method,
-                           headers = Headers,
-                           params = Params,
-                           request_timeout = RequestTimeout}, ClientInfo) ->
-    case request(Method, Path, Headers, feedvar(Params, ClientInfo), RequestTimeout) of
+is_superuser(PoolName, #http_request{path = Path,
+                                     method = Method,
+                                     headers = Headers,
+                                     params = Params,
+                                     request_timeout = RequestTimeout}, ClientInfo) ->
+    case request(PoolName, Method, Path, Headers, feedvar(Params, ClientInfo), RequestTimeout) of
         {ok, 200, _Body}   -> true;
         {ok, _Code, _Body} -> false;
         {error, Error}     -> ?LOG(error, "Request superuser path ~s, error: ~p", [Path, Error]),

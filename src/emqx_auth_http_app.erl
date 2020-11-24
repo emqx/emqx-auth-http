@@ -36,30 +36,35 @@ start(_StartType, _StartArgs) ->
     case translate_env() of
         ok ->
             {ok, PoolOpts} = application:get_env(?APP, pool_opts),
-            {ok, Sup} = emqx_http_client_sup:start_link(?APP, inet(PoolOpts)),
+            {ok, Sup} = emqx_http_client_sup:start_link(?APP, ssl(inet(PoolOpts))),
             with_env(auth_req, fun load_auth_hook/1),
             with_env(acl_req,  fun load_acl_hook/1),
             {ok, Sup};
         {error, Reason} ->
             {error, Reason}
     end.
-    
 
 load_auth_hook(AuthReq) ->
     ok = emqx_auth_http:register_metrics(),
     SuperReq = r(application:get_env(?APP, super_req, undefined)),
     Params = #{auth_req   => AuthReq,
-               super_req  => SuperReq},
+               super_req  => SuperReq,
+               pool_name  => ?APP},
     emqx:hook('client.authenticate', {emqx_auth_http, check, [Params]}).
 
 load_acl_hook(AclReq) ->
     ok = emqx_acl_http:register_metrics(),
-    Params = #{acl_req => AclReq},
+    Params = #{acl_req   => AclReq,
+               pool_name => ?APP},
     emqx:hook('client.check_acl', {emqx_acl_http, check_acl, [Params]}).
 
 stop(_State) ->
+    {ok, PoolOpts} = application:get_env(?APP, pool_opts),
+    Schedulers = erlang:system_info(schedulers),
+    PoolSize = proplists:get_value(pool_size, PoolOpts, Schedulers),
     emqx:unhook('client.authenticate', {emqx_auth_http, check}),
-    emqx:unhook('client.check_acl', {emqx_acl_http, check_acl}).
+    emqx:unhook('client.check_acl', {emqx_acl_http, check_acl}),
+    emqx_http_client_sup:stop(?APP, PoolSize).
 
 %%--------------------------------------------------------------------
 %% Dummy supervisor
@@ -97,6 +102,16 @@ inet(PoolOpts) ->
             [{transport_opts, [inet6 | TransOpts]} | NewPoolOpts];
         _ ->
             PoolOpts
+    end.
+
+ssl(PoolOpts) ->
+    case proplists:get_value(ssl, PoolOpts, []) of
+        [] ->
+            PoolOpts;
+        SSLOpts ->
+            TransOpts = proplists:get_value(transport_opts, PoolOpts, []),
+            NewPoolOpts = proplists:delete(transport_opts, PoolOpts),
+            [{transport_opts, SSLOpts ++ TransOpts}, {transport, ssl} | NewPoolOpts]
     end.
 
 translate_env() ->

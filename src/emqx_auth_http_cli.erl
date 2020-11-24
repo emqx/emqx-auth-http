@@ -18,7 +18,7 @@
 
 -include("emqx_auth_http.hrl").
 
--export([ request/5
+-export([ request/6
         , feedvar/2
         , feedvar/3
         ]).
@@ -27,18 +27,18 @@
 %% HTTP Request
 %%--------------------------------------------------------------------
 
-request(get, Path, Headers, Params, Timeout) ->
+request(PoolName, get, Path, Headers, Params, Timeout) ->
     NewPath = Path ++ "?" ++ cow_qs:qs(bin_kw(Params)),
-    reply(emqx_http_client:request(get, ?APP, {NewPath, Headers}, Timeout));
+    reply(emqx_http_client:request(get, PoolName, {NewPath, Headers}, Timeout));
 
-request(post, Path, Headers, Params, Timeout) ->
+request(PoolName, post, Path, Headers, Params, Timeout) ->
     Body = case proplists:get_value(<<"content_type">>, Headers) of
                <<"application/x-www-form-urlencoded">> ->
                    cow_qs:qs(bin_kw(Params));
                <<"application/json">> -> 
                    emqx_json:encode(bin_kw(Params))
            end,
-    reply(emqx_http_client:request(post, ?APP, {Path, Headers, Body}, Timeout)).
+    reply(emqx_http_client:request(post, PoolName, {Path, Headers, Body}, Timeout)).
 
 reply({ok, StatusCode, _Headers}) ->
     {ok, StatusCode, <<>>};

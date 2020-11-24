@@ -24,7 +24,7 @@
 -logger_header("[ACL http]").
 
 -import(emqx_auth_http_cli,
-        [ request/5
+        [ request/6
         , feedvar/2
         ]).
 
@@ -48,9 +48,10 @@ check_acl(ClientInfo, PubSub, Topic, AclResult, State) ->
 
 do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Config) ->
     ok;
-do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req := AclReq}) ->
+do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req := AclReq,
+                                                      pool_name := PoolName}) ->
     ClientInfo1 = ClientInfo#{access => access(PubSub), topic => Topic},
-    case check_acl_request(AclReq, ClientInfo1) of
+    case check_acl_request(PoolName, AclReq, ClientInfo1) of
         {ok, 200, <<"ignore">>} -> ok;
         {ok, 200, _Body}    -> {stop, allow};
         {ok, _Code, _Body}  -> {stop, deny};
@@ -76,12 +77,12 @@ inc_metrics({stop, deny}) ->
 return_with(Fun, Result) ->
     Fun(Result), Result.
 
-check_acl_request(#http_request{path = Path,
-                                method = Method,
-                                headers = Headers,
-                                params = Params,
-                                request_timeout = RequestTimeout}, ClientInfo) ->
-    request(Method, Path, Headers, feedvar(Params, ClientInfo), RequestTimeout).
+check_acl_request(PoolName, #http_request{path = Path,
+                                          method = Method,
+                                          headers = Headers,
+                                          params = Params,
+                                          request_timeout = RequestTimeout}, ClientInfo) ->
+    request(PoolName, Method, Path, Headers, feedvar(Params, ClientInfo), RequestTimeout).
 
 access(subscribe) -> 1;
 access(publish)   -> 2.
