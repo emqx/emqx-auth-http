@@ -6,7 +6,8 @@
     ]},
     {"4.2.0", [
       {restart_application, emqx_auth_http}
-    ]}
+    ]},
+    {<<".*">>, []}
   ],
   [
     {"4.2.1", [
@@ -14,6 +15,7 @@
     ]},
     {"4.2.0", [
       {restart_application, emqx_auth_http}
-    ]}
+    ]},
+    {<<".*">>, []}
   ]
 }.
