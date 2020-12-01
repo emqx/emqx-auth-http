@@ -3,15 +3,12 @@
 -behaviour(supervisor).
 
 -export([ start_link/2
-        , stop/2
         , init/1
+        , stop_pool/1
         ]).
 
 start_link(Pool, Opts) ->
     supervisor:start_link(?MODULE, [Pool, Opts]).
-
-stop(Pool, PoolSize) ->
-    stop_pool(Pool, PoolSize).
 
 init([Pool, Opts]) ->
     PoolSize = pool_size(Opts),
@@ -44,8 +41,7 @@ pool_size(Opts) ->
     Schedulers = erlang:system_info(schedulers),
     proplists:get_value(pool_size, Opts, Schedulers).
 
-stop_pool(Name, Size) ->
-    [emqx_modules_sup:stop_child({Name, I}) || I <- lists:seq(1, Size)],
+stop_pool(Name) ->
     Workers = gproc_pool:defined_workers(Name),
     [gproc_pool:remove_worker(Name, WokerName) || {WokerName, _, _} <- Workers],
     gproc_pool:delete(Name),

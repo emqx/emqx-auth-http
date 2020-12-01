@@ -17,7 +17,6 @@
 -module(emqx_auth_http_app).
 
 -behaviour(application).
--behaviour(supervisor).
 
 -emqx_plugin(auth).
 
@@ -59,12 +58,9 @@ load_acl_hook(AclReq) ->
     emqx:hook('client.check_acl', {emqx_acl_http, check_acl, [Params]}).
 
 stop(_State) ->
-    {ok, PoolOpts} = application:get_env(?APP, pool_opts),
-    Schedulers = erlang:system_info(schedulers),
-    PoolSize = proplists:get_value(pool_size, PoolOpts, Schedulers),
     emqx:unhook('client.authenticate', {emqx_auth_http, check}),
     emqx:unhook('client.check_acl', {emqx_acl_http, check_acl}),
-    emqx_http_client_sup:stop(?APP, PoolSize).
+    emqx_http_client_sup:stop_pool(?APP).
 
 %%--------------------------------------------------------------------
 %% Dummy supervisor
