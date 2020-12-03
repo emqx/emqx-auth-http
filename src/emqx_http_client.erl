@@ -173,6 +173,8 @@ await_response(StreamRef, Timeout, State = #state{client = Client, mref = MRef})
             await_body(StreamRef, Timeout, {StatusCode, Headers, <<>>}, State);
         {gun_error, Client, StreamRef, Reason} ->
             {reply, {error, Reason}, State};
+        {gun_down, Client, _, Reason, _, _} ->
+            {reply, {error, Reason}, State};
         {'DOWN', MRef, process, Client, Reason} ->
             true = erlang:demonitor(MRef, [flush]),
             {reply, {error, Reason}, State#state{client = undefined, mref = undefiend}}
@@ -187,9 +189,9 @@ await_body(StreamRef, Timeout, {StatusCode, Headers, Acc}, State = #state{client
             {reply, {ok, StatusCode, Headers, << Acc/binary, Data/binary >>}, State};
         {gun_data, Client, StreamRef, nofin, Data} ->
             await_body(StreamRef, Timeout, {StatusCode, Headers, << Acc/binary, Data/binary >>}, State);
-        % {gun_error, Client, StreamRef, {closed, _}} ->
-        %     todo;
         {gun_error, Client, StreamRef, Reason} ->
+            {reply, {error, Reason}, State};
+        {gun_down, Client, _, Reason, _, _} ->
             {reply, {error, Reason}, State};
         {'DOWN', MRef, process, Client, Reason} ->
             true = erlang:demonitor(MRef, [flush]),
