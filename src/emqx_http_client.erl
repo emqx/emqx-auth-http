@@ -245,12 +245,12 @@ do_request(Client, post, {Path, Headers, Body}) ->
 
 flush_stream(Client, StreamRef) ->
     receive
-		{gun_response, Client, StreamRef, _, _, _} ->
-			ok;
-		{gun_data, Client, StreamRef, _, _} ->
-			ok;
-		{gun_error, Client, StreamRef, _} ->
-			ok
+        {gun_response, Client, StreamRef, _, _, _} ->
+            flush_stream(Client, StreamRef);
+        {gun_data, Client, StreamRef, _, _} ->
+            flush_stream(Client, StreamRef);
+        {gun_error, Client, StreamRef, _} ->
+            flush_stream(Client, StreamRef)
 	after 0 ->
 		ok
 	end.
