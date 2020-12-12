@@ -27,6 +27,7 @@ File: etc/emqx_auth_http.conf
 ##  - %P: password
 ##  - %C: common name of client TLS cert
 ##  - %d: subject of client TLS cert
+##  - %k: websocket cookie
 ##
 ## Value: URL
 auth.http.auth_req = http://127.0.0.1:8080/mqtt/auth
@@ -46,6 +47,7 @@ auth.http.auth_req.params = clientid=%c,username=%u,password=%P
 ##  - %P: password
 ##  - %C: common name of client TLS cert
 ##  - %d: subject of client TLS cert
+##  - %k: websocket cookie
 ##
 ## Value: URL
 auth.http.super_req = http://127.0.0.1:8080/mqtt/superuser
@@ -65,6 +67,7 @@ auth.http.super_req.params = clientid=%c,username=%u
 ##  - %r: protocol
 ##  - %m: mountpoint
 ##  - %t: topic
+##  - %k: websocket cookie
 ##
 ## Value: URL
 auth.http.acl_req = http://127.0.0.1:8080/mqtt/acl
