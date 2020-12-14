@@ -118,9 +118,9 @@ translate_env() ->
                             URL = proplists:get_value(url, Env),
                             #{host := Host0,
                               port := Port,
-                              path := Path} = uri_string:parse(list_to_binary(URL)),
-                            Host = get_addr(binary_to_list(Host0)),
-                            [{Name, {Host, Port, binary_to_list(Path)}} | Acc]
+                              path := Path} = uri_string:parse(URL),
+                            Host = get_addr(Host0),
+                            [{Name, {Host, Port, path(Path)}} | Acc]
                     end
                 end, [], [acl_req, auth_req, super_req]),
     case same_host_and_port(URLs) of
@@ -136,6 +136,9 @@ translate_env() ->
         false ->
             {error, different_server}
     end.
+
+path("") -> "/";
+path(Path) -> Path.
 
 same_host_and_port([_]) ->
     true;
