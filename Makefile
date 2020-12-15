@@ -1,8 +1,5 @@
 ## shallow clone for speed
 
-REBAR_GIT_CLONE_OPTIONS += --depth 1
-export REBAR_GIT_CLONE_OPTIONS
-
 REBAR = rebar3
 all: compile
 
