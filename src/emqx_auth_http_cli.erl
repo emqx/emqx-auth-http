@@ -29,7 +29,7 @@
 
 request(PoolName, get, Path, Headers, Params, Timeout) ->
     NewPath = Path ++ "?" ++ cow_qs:qs(bin_kw(Params)),
-    reply(emqx_http_client:request(get, PoolName, {NewPath, Headers}, Timeout));
+    reply(ehttpc:request(ehttpc_pool:pick_worker(PoolName), get, {NewPath, Headers}, Timeout));
 
 request(PoolName, post, Path, Headers, Params, Timeout) ->
     Body = case proplists:get_value(<<"content_type">>, Headers) of
@@ -38,7 +38,7 @@ request(PoolName, post, Path, Headers, Params, Timeout) ->
                <<"application/json">> -> 
                    emqx_json:encode(bin_kw(Params))
            end,
-    reply(emqx_http_client:request(post, PoolName, {Path, Headers, Body}, Timeout)).
+    reply(ehttpc:request(ehttpc_pool:pick_worker(PoolName), post, {Path, Headers, Body}, Timeout)).
 
 reply({ok, StatusCode, _Headers}) ->
     {ok, StatusCode, <<>>};

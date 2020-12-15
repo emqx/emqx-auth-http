@@ -25,7 +25,6 @@
 -export([ start/2
         , stop/1
         ]).
--export([init/1]).
 
 %%--------------------------------------------------------------------
 %% Application Callbacks
@@ -34,8 +33,9 @@
 start(_StartType, _StartArgs) ->
     case translate_env() of
         ok ->
+            {ok, Sup} = emqx_auth_http_sup:start_link(),
             {ok, PoolOpts} = application:get_env(?APP, pool_opts),
-            {ok, Sup} = emqx_http_client_sup:start_link(?APP, ssl(inet(PoolOpts))),
+            ehttpc_pool:start_pool(?APP, ssl(inet(PoolOpts))),
             with_env(auth_req, fun load_auth_hook/1),
             with_env(acl_req,  fun load_acl_hook/1),
             {ok, Sup};
@@ -60,14 +60,7 @@ load_acl_hook(AclReq) ->
 stop(_State) ->
     emqx:unhook('client.authenticate', {emqx_auth_http, check}),
     emqx:unhook('client.check_acl', {emqx_acl_http, check_acl}),
-    emqx_http_client_sup:stop_pool(?APP).
-
-%%--------------------------------------------------------------------
-%% Dummy supervisor
-%%--------------------------------------------------------------------
-
-init([]) ->
-    {ok, { {one_for_all, 10, 100}, []} }.
+    ehttpc_pool:stop_pool(?APP).
 
 %%--------------------------------------------------------------------
 %% Internel functions
@@ -118,9 +111,10 @@ translate_env() ->
                             URL = proplists:get_value(url, Env),
                             #{host := Host0,
                               port := Port,
-                              path := Path} = uri_string:parse(list_to_binary(URL)),
-                            Host = get_addr(binary_to_list(Host0)),
-                            [{Name, {Host, Port, binary_to_list(Path)}} | Acc]
+                              path := Path0} = uri_string:parse(URL),
+                            Host = get_addr(Host0),
+                            Path = path(Path0),
+                            [{Name, {Host, Port, Path}} | Acc]
                     end
                 end, [], [acl_req, auth_req, super_req]),
     case same_host_and_port(URLs) of
@@ -131,11 +125,14 @@ translate_env() ->
              end || {Name, {_, _, Path}} <- URLs],
             {_, {Host, Port, _}} = lists:last(URLs),
             PoolOpts = application:get_env(?APP, pool_opts, []),
-            application:set_env(?APP, pool_opts, [{host, Host}, {port, Port} | PoolOpts]),
+            application:set_env(?APP, pool_opts, [{host, Host}, {port, Port}, {pool_type, random} | PoolOpts]),
             ok;
         false ->
             {error, different_server}
     end.
+
+path("") -> "/";
+path(Path) -> Path.
 
 same_host_and_port([_]) ->
     true;
