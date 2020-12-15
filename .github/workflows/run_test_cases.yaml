@@ -12,13 +12,12 @@ jobs:
               run: |
                 docker network create --driver bridge --ipv6 --subnet fd15:555::/64  tests_emqx_bridge
                 docker run -i \
+                  -e DIAGNOSTIC=1 \
                   --network tests_emqx_bridge \
                   -v $(pwd):/emqx_auth_http \
+                  -w /emqx_auth_http \
                   erlang:22.3 \
-                  bash -c "make -C /emqx_auth_http xref
-                  make -C /emqx_auth_http eunit  
-                  make -C /emqx_auth_http ct
-                  make -C /emqx_auth_http cover"
+                  bash -c "make xref && make eunit && make ct && make cover"
             - uses: actions/upload-artifact@v1
               if: failure()
               with:
