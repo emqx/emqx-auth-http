@@ -85,7 +85,7 @@ r(Config) ->
     Headers = application:get_env(?APP, headers, []),
     Method = proplists:get_value(method, Config, post),
     Path    = proplists:get_value(path, Config),
-    NewHeaders = [{<<"content_type">>, proplists:get_value(content_type, Config, <<"application/x-www-form-urlencoded">>)} | Headers],
+    NewHeaders = [{<<"content-type">>, proplists:get_value(content_type, Config, <<"application/x-www-form-urlencoded">>)} | Headers],
     Params = proplists:get_value(params, Config),
     {ok, RequestTimeout} = application:get_env(?APP, request_timeout),
     #http_request{method = Method, path = Path, headers = NewHeaders, params = Params, request_timeout = RequestTimeout}.
