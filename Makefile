@@ -11,11 +11,11 @@ compile:
 
 clean: distclean
 
-ct: compile
-	$(REBAR) as test ct -v
+ct:
+	$(REBAR) ct -v
 
-eunit: compile
-	$(REBAR) as test eunit
+eunit:
+	$(REBAR) eunit
 
 xref:
 	$(REBAR) xref
