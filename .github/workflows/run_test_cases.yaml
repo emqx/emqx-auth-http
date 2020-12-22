@@ -16,8 +16,11 @@ jobs:
                   -v $(pwd):/emqx_auth_http \
                   erlang:22.3 \
                   bash -c "make -C /emqx_auth_http xref
-                  make -C /emqx_auth_http eunit  
+                  rm -rf /emqx_auth_http/rebar.lock && rm -rf /emqx_auth_http/_build/default/lib/cowlib
+                  make -C /emqx_auth_http eunit
+                  rm -rf /emqx_auth_http/rebar.lock && rm -rf /emqx_auth_http/_build/default/lib/cowlib
                   make -C /emqx_auth_http ct
+                  rm -rf /emqx_auth_http/rebar.lock && rm -rf /emqx_auth_http/_build/default/lib/cowlib
                   make -C /emqx_auth_http cover"
             - uses: actions/upload-artifact@v1
               if: failure()
