@@ -1,13 +1,13 @@
 %% -*-: erlang -*-
 {VSN,
   [
-    {<<"4.2.[0-3]">>, [
+    {<<"4.2.[0-4]">>, [
       {restart_application, emqx_auth_http}
     ]},
     {<<".*">>, []}
   ],
   [
-    {<<"4.2.[0-3]">>, [
+    {<<"4.2.[0-4]">>, [
       {restart_application, emqx_auth_http}
     ]},
     {<<".*">>, []}
