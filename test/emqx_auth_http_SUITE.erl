@@ -54,7 +54,7 @@ init_per_group(GrpName, Cfg) ->
 
 end_per_group(_GrpName, _Cfg) ->
     http_auth_server:stop(),
-    emqx_ct_helpers:stop_apps([emqx_auth_http, emqx]).
+    emqx_ct_helpers:stop_apps([emqx_auth_http]).
 
 set_special_configs(emqx, _Schmea, _Inet) ->
     application:set_env(emqx, allow_anonymous, true),
@@ -166,3 +166,10 @@ t_comment_config(_) ->
     ?assertEqual(AuthCount - 1, length(emqx_hooks:lookup('client.authenticate'))),
     ?assertEqual(AclCount - 1, length(emqx_hooks:lookup('client.check_acl'))).
 
+t_feedvar(_) ->
+    Params = [{"cookie", "%k"}],
+    User0 = ?USER(<<"client1">>, <<"testuser">>, mqtt, {127,0,0,1}, external),
+    ?assertEqual([{"cookie", <<"null">>}], emqx_auth_http_cli:feedvar(Params, User0)),
+
+    User1 = User0#{ws_cookie => [{<<"k">>, <<"v">>}]},
+    ?assertEqual([{"cookie", <<"{\"k\":\"v\"}">>}], emqx_auth_http_cli:feedvar(Params, User1)).
