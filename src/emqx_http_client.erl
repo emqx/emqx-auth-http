@@ -42,9 +42,9 @@ request(Method, Pool, Req) ->
     request(Method, Pool, Req, 5000).
 
 request(get, Pool, {Path, Headers}, Timeout) ->
-    call(pick(Pool), {get, {Path, Headers}, Timeout}, Timeout + 1000);
+    call(pick(Pool), {get, {Path, Headers}, Timeout}, infinity);
 request(Method, Pool, {Path, Headers, Body}, Timeout) ->
-    call(pick(Pool), {Method, {Path, Headers, Body}, Timeout}, Timeout + 1000).
+    call(pick(Pool), {Method, {Path, Headers, Body}, Timeout}, infinity).
 
 %%--------------------------------------------------------------------
 %% gen_server callbacks
