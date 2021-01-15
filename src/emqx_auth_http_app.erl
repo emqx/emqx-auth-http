@@ -94,10 +94,16 @@ inet(PoolOpts) ->
     Host = proplists:get_value(host, PoolOpts),
     TransOpts = proplists:get_value(transport_opts, PoolOpts, []),
     NewPoolOpts = proplists:delete(transport_opts, PoolOpts),
-    [{transport_opts, [case inet:getaddr(Host, inet6) of
-                           {error, _} -> inet;
-                           {ok, _} -> inet6
-                       end | TransOpts]} | NewPoolOpts].
+    Inet = case Host of
+               {_,_,_,_} -> inet;
+               {_,_,_,_,_,_,_,_} -> inet6;
+               _ ->
+                   case inet:getaddr(Host, inet6) of
+                       {error, _} -> inet;
+                       {ok, _} -> inet6
+                   end
+           end,
+    [{transport_opts, [Inet | TransOpts]} | NewPoolOpts].
 
 ssl(PoolOpts) ->
     case proplists:get_value(ssl, PoolOpts, []) of
@@ -133,15 +139,20 @@ translate_env() ->
              end || {Name, {_, _, Path}} <- URLs],
             {_, {Host, Port, _}} = lists:last(URLs),
             PoolOpts = application:get_env(?APP, pool_opts, []),
-            application:set_env(?APP, pool_opts, [{host, Host}, {port, Port} | PoolOpts]),
+            NHost = case inet:parse_address(Host) of
+                        {ok, {_,_,_,_} = Addr} -> Addr;
+                        {ok, {_,_,_,_,_,_,_,_} = Addr} -> Addr;
+                        {error, einval} -> Host
+                    end,
+            application:set_env(?APP, pool_opts, [{host, NHost}, {port, Port} | PoolOpts]),
             ok;
         false ->
             {error, different_server}
     end.
 
-add_default_scheme("http://" ++ URL) ->
+add_default_scheme("http://" ++ _ = URL) ->
     URL;
-add_default_scheme("https://" ++ URL) ->
+add_default_scheme("https://" ++ _ = URL) ->
     URL;
 add_default_scheme(URL) ->
     "http://" ++ URL.
