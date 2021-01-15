@@ -116,11 +116,11 @@ translate_env() ->
                         Env ->
                             URL = proplists:get_value(url, Env),
                             #{host := Host,
-                              path := Path} = URIMap = uri_string:parse(URL),
-                            {ok, PoolOpts} = application:get_env(?APP, pool_opts),
-                            Port = maps:get(port, URIMap, case proplists:get_value(ssl, PoolOpts, []) of
-                                                              [] -> 80;
-                                                              _ -> 443
+                              path := Path,
+                              scheme := Scheme} = URIMap = uri_string:parse(add_default_scheme(URL)),
+                            Port = maps:get(port, URIMap, case Scheme of
+                                                              "https" -> 443;
+                                                              _ -> 80
                                                           end),
                             [{Name, {Host, Port, path(Path)}} | Acc]
                     end
@@ -138,6 +138,13 @@ translate_env() ->
         false ->
             {error, different_server}
     end.
+
+add_default_scheme("http://" ++ URL) ->
+    URL;
+add_default_scheme("https://" ++ URL) ->
+    URL;
+add_default_scheme(URL) ->
+    "http://" ++ URL.
 
 path("") -> "/";
 path(Path) -> Path.
