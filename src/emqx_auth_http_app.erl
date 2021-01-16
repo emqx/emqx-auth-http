@@ -85,20 +85,31 @@ r(Config) ->
     Headers = application:get_env(?APP, headers, []),
     Method = proplists:get_value(method, Config, post),
     Path    = proplists:get_value(path, Config),
-    NewHeaders = [{<<"content-type">>, proplists:get_value(content_type, Config, <<"application/x-www-form-urlencoded">>)} | Headers],
+    NewHeaders = case Method of
+                    Method when Method =:= post orelse Method =:= put ->
+                        ContentType = proplists:get_value(content_type, Config, <<"application/x-www-form-urlencoded">>),
+                        [{<<"content-type">>, ContentType} | Headers];
+                    _ ->
+                        Headers
+                 end,
     Params = proplists:get_value(params, Config),
     {ok, RequestTimeout} = application:get_env(?APP, request_timeout),
     #http_request{method = Method, path = Path, headers = NewHeaders, params = Params, request_timeout = RequestTimeout}.
 
 inet(PoolOpts) ->
-    case proplists:get_value(host, PoolOpts) of
-        Host when tuple_size(Host) =:= 8 ->
-            TransOpts = proplists:get_value(transport_opts, PoolOpts, []),
-            NewPoolOpts = proplists:delete(transport_opts, PoolOpts),
-            [{transport_opts, [inet6 | TransOpts]} | NewPoolOpts];
-        _ ->
-            PoolOpts
-    end.
+    Host = proplists:get_value(host, PoolOpts),
+    TransOpts = proplists:get_value(transport_opts, PoolOpts, []),
+    NewPoolOpts = proplists:delete(transport_opts, PoolOpts),
+    Inet = case Host of
+               {_,_,_,_} -> inet;
+               {_,_,_,_,_,_,_,_} -> inet6;
+               _ ->
+                   case inet:getaddr(Host, inet6) of
+                       {error, _} -> inet;
+                       {ok, _} -> inet6
+                   end
+           end,
+    [{transport_opts, [Inet | TransOpts]} | NewPoolOpts].
 
 ssl(PoolOpts) ->
     case proplists:get_value(ssl, PoolOpts, []) of
@@ -116,10 +127,13 @@ translate_env() ->
                         [] -> Acc;
                         Env ->
                             URL = proplists:get_value(url, Env),
-                            #{host := Host0,
-                              port := Port,
-                              path := Path} = uri_string:parse(URL),
-                            Host = get_addr(Host0),
+                            #{host := Host,
+                              path := Path,
+                              scheme := Scheme} = URIMap = uri_string:parse(add_default_scheme(URL)),
+                            Port = maps:get(port, URIMap, case Scheme of
+                                                              "https" -> 443;
+                                                              _ -> 80
+                                                          end),
                             [{Name, {Host, Port, path(Path)}} | Acc]
                     end
                 end, [], [acl_req, auth_req, super_req]),
@@ -131,11 +145,23 @@ translate_env() ->
              end || {Name, {_, _, Path}} <- URLs],
             {_, {Host, Port, _}} = lists:last(URLs),
             PoolOpts = application:get_env(?APP, pool_opts, []),
-            application:set_env(?APP, pool_opts, [{host, Host}, {port, Port} | PoolOpts]),
+            NHost = case inet:parse_address(Host) of
+                        {ok, {_,_,_,_} = Addr} -> Addr;
+                        {ok, {_,_,_,_,_,_,_,_} = Addr} -> Addr;
+                        {error, einval} -> Host
+                    end,
+            application:set_env(?APP, pool_opts, [{host, NHost}, {port, Port} | PoolOpts]),
             ok;
         false ->
             {error, different_server}
     end.
+
+add_default_scheme("http://" ++ _ = URL) ->
+    URL;
+add_default_scheme("https://" ++ _ = URL) ->
+    URL;
+add_default_scheme(URL) ->
+    "http://" ++ URL.
 
 path("") -> "/";
 path(Path) -> Path.
@@ -148,16 +174,4 @@ same_host_and_port([{_, {Host, Port, _}}, URL = {_, {Host, Port, _}} | Rest]) ->
     same_host_and_port([URL | Rest]);
 same_host_and_port(_) ->
     false.
-
-get_addr(Hostname) ->
-    case inet:parse_address(Hostname) of
-        {ok, {_,_,_,_} = Addr} -> Addr;
-        {ok, {_,_,_,_,_,_,_,_} = Addr} -> Addr;
-        {error, einval} ->
-            case inet:getaddr(Hostname, inet) of
-                 {error, _} ->
-                     {ok, Addr} = inet:getaddr(Hostname, inet6),
-                     Addr;
-                 {ok, Addr} -> Addr
-            end
-    end.
+    
