@@ -1,12 +1,18 @@
 %% -*-: erlang -*-
 {VSN,
   [
+    {"4.2.6", [
+      {load_module, emqx_auth_http_cli, brutal_purge, soft_purge, []}
+    ]},
     {<<"4.2.[0-5]">>, [
       {restart_application, emqx_auth_http}
     ]},
     {<<".*">>, []}
   ],
   [
+    {"4.2.6", [
+      {load_module, emqx_auth_http_cli, brutal_purge, soft_purge, []}
+    ]},
     {<<"4.2.[0-5]">>, [
       {restart_application, emqx_auth_http}
     ]},
