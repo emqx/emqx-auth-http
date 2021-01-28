@@ -41,15 +41,15 @@ request(PoolName, post, Path, Headers, Params, Timeout) ->
     do_request(post, PoolName, {Path, Headers, Body}, Timeout).
 
 do_request(Method, PoolName, Req, Timeout) ->
-    do_request(Method, PoolName, Req, Timeout, 0).
+    do_request(Method, PoolName, Req, Timeout, 3).
 
 %% Only retry when connection closed by keepalive
-do_request(_Method, _PoolName, _Req, _Timeout, 3) ->
+do_request(_Method, _PoolName, _Req, _Timeout, 0) ->
     {error, normal};
 do_request(Method, PoolName, Req, Timeout, Retry) ->
     case emqx_http_client:request(Method, PoolName, Req, Timeout) of
         {error, normal} ->
-            do_request(Method, PoolName, Req, Timeout, Retry + 1);
+            do_request(Method, PoolName, Req, Timeout, Retry - 1);
         {error, Reason} ->
             {error, Reason};
         {ok, StatusCode, _Headers} ->
