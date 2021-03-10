@@ -19,7 +19,7 @@
 ]}.
 
 {translation, "emqx_auth_http.auth_req", fun(Conf) ->
-  case cuttlefish:conf_get("auth.http.auth_req", Conf) of
+  case cuttlefish:conf_get("auth.http.auth_req", Conf, undefined) of
     undefined -> cuttlefish:unset();
     Url ->
       Params = cuttlefish:conf_get("auth.http.auth_req.params", Conf),
