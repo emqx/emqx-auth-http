@@ -128,13 +128,12 @@ translate_env() ->
                         Env ->
                             URL = proplists:get_value(url, Env),
                             #{host := Host,
-                              path := Path,
                               scheme := Scheme} = URIMap = uri_string:parse(add_default_scheme(URL)),
                             Port = maps:get(port, URIMap, case Scheme of
                                       "https" -> 443;
                                       _ -> 80
                                   end),
-                            [{Name, {Host, Port, path(Path)}} | Acc]
+                            [{Name, {Host, Port, path(URIMap)}} | Acc]
                     end
                 end, [], [acl_req, auth_req, super_req]),
     case same_host_and_port(URLs) of
@@ -165,8 +164,14 @@ same_host_and_port([{_, {Host, Port, _}}, URL = {_, {Host, Port, _}} | Rest]) ->
 same_host_and_port(_) ->
     false.
 
-path("") -> "/";
-path(Path) -> Path.
+path(#{path := "", 'query' := Query}) ->
+    "?" ++ Query;
+path(#{path := Path, 'query' := Query}) ->
+    Path ++ "?" ++ Query;
+path(#{path := ""}) ->
+    "/";
+path(#{path := Path}) ->
+    Path.
 
 add_default_scheme("http://" ++ _ = URL) ->
     URL;
