@@ -39,12 +39,13 @@ start_link(Pool, Id, Opts) ->
     gen_server:start_link(?MODULE, [Pool, Id, Opts], []).
 
 request(Method, Pool, Req) ->
-    request(Method, Pool, Req, 5000).
+    request(Method, Pool, Req, 5000, 3).
 
-request(get, Pool, {Path, Headers}, Timeout) ->
-    call(pick(Pool), {get, {Path, Headers}, Timeout}, Timeout + 1000);
-request(Method, Pool, {Path, Headers, Body}, Timeout) ->
-    call(pick(Pool), {Method, {Path, Headers, Body}, Timeout}, Timeout + 1000).
+request(Method, Pool, Req, Timeout) ->
+    request(Method, Pool, Req, Timeout, 3).
+
+request(Method, Pool, Req, Timeout, Retry) ->
+    request_(pick(Pool), Method, Req, Timeout, Retry).
 
 %%--------------------------------------------------------------------
 %% gen_server callbacks
@@ -234,8 +235,20 @@ gun_opts([{transport_opts, TransportOpts} | Opts], Acc) ->
 gun_opts([_ | Opts], Acc) ->
     gun_opts(Opts, Acc).
 
-call(ChannPid, Msg, Timeout) ->
-    gen_server:call(ChannPid, Msg, Timeout).
+request_(_Worker, _Method, _Req, _Timeout, 0) ->
+    {error, normal};
+request_(Worker, Method, Req, Timeout, Retry) ->
+    try gen_server:call(Worker,  {Method, Req, Timeout}, Timeout + 1000) of
+        {error, normal} ->
+            request_(Worker, Method, Req, Timeout, Retry - 1);
+        {error, Reason} ->
+            {error, Reason};
+        Other ->
+            Other
+    catch
+        exit:{timeout, _Details} ->
+            {error, timeout}
+    end.
 
 pick(Pool) ->
     gproc_pool:pick_worker(Pool).
