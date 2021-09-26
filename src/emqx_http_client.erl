@@ -40,18 +40,15 @@
 start_link(Opts) ->
     gen_server:start_link(?MODULE, [Opts], []).
 
-request(Method, Worker, Req) ->
-    request(Method, Worker, Req, 5000, 3).
+request(Method, PoolName, Req) ->
+    request(Method, PoolName, Req, 5000, 3).
 
-request(Method, Worker, Req, Timeout) ->
-    request(Method, Worker, Req, Timeout, 3).
+request(Method, PoolName, Req, Timeout) ->
+    request(Method, PoolName, Req, Timeout, 3).
 
-request(Method, Worker, Req, Timeout, Retry) when is_atom(Worker) ->
-    request(Method, Worker, Req, Timeout, Retry);
-
-request(Method, Worker, Request, Timeout, Retry) when is_pid(Worker) ->
+request(Method, PoolName, Request, Timeout, Retry) ->
     ExpireAt = now_() + Timeout,
-    try call(Worker, {Method, Request, ExpireAt}, Timeout + 1000) of
+    try call(PoolName, {Method, Request, ExpireAt}, Timeout + 1000) of
         %% gun will reply {gun_down, _Client, _, normal, _KilledStreams, _} message
         %% when connection closed by keepalive
         {error, Reason} ->
@@ -59,7 +56,7 @@ request(Method, Worker, Request, Timeout, Retry) when is_pid(Worker) ->
                 true ->
                     {error, Reason};
                 false ->
-                    request(Worker, Method, Request, Timeout, Retry - 1)
+                    request(Method, PoolName, Request, Timeout, Retry - 1)
             end;
         Other ->
             Other
@@ -281,8 +278,10 @@ gun_opts([{transport_opts, TransportOpts} | Opts], Acc) ->
 gun_opts([_ | Opts], Acc) ->
     gun_opts(Opts, Acc).
 
-call(ChannPid, Msg, Timeout) ->
-    gen_server:call(ChannPid, Msg, Timeout).
+call(PoolName, Msg, Timeout) ->
+    ecpool:with_client(PoolName, fun(C) ->
+        gen_server:call(C, Msg, Timeout)
+    end).
 
 do_request(Client, get, {Path, Headers}) ->
     gun:get(Client, Path, Headers);
