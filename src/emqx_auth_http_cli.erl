@@ -35,7 +35,7 @@ request(PoolName, post, Path, Headers, Params, Timeout) ->
     Body = case proplists:get_value(<<"content-type">>, Headers) of
                <<"application/x-www-form-urlencoded">> ->
                    cow_qs:qs(bin_kw(Params));
-               <<"application/json">> -> 
+               <<"application/json">> ->
                    emqx_json:encode(bin_kw(Params))
            end,
     do_request(post, PoolName, {Path, Headers, Body}, Timeout).
@@ -47,16 +47,18 @@ do_request(Method, PoolName, Req, Timeout) ->
 do_request(_Method, _PoolName, _Req, _Timeout, 0) ->
     {error, normal};
 do_request(Method, PoolName, Req, Timeout, Retry) ->
-    case emqx_http_client:request(Method, PoolName, Req, Timeout) of
-        {error, normal} ->
-            do_request(Method, PoolName, Req, Timeout, Retry - 1);
-        {error, Reason} ->
-            {error, Reason};
-        {ok, StatusCode, _Headers} ->
-            {ok, StatusCode, <<>>};
-        {ok, StatusCode, _Headers, Body} ->
-            {ok, StatusCode, Body}
-    end.
+    ecpool:with_client(PoolName, fun(C) ->
+        case emqx_http_client:request(Method, C, Req, Timeout) of
+            {error, normal} ->
+                do_request(Method, C, Req, Timeout, Retry - 1);
+            {error, Reason} ->
+                {error, Reason};
+            {ok, StatusCode, _Headers} ->
+                {ok, StatusCode, <<>>};
+            {ok, StatusCode, _Headers, Body} ->
+                {ok, StatusCode, Body}
+        end
+    end).
 
 %% TODO: move this conversion to cuttlefish config and schema
 bin_kw(KeywordList) when is_list(KeywordList) ->
