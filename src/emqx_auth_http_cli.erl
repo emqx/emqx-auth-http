@@ -50,6 +50,8 @@ do_request(Method, PoolName, Req, Timeout, Retry) ->
     case emqx_http_client:request(Method, PoolName, Req, Timeout) of
         {error, normal} ->
             do_request(Method, PoolName, Req, Timeout, Retry - 1);
+        {error, {closed, _Reason}} ->
+            do_request(Method, PoolName, Req, Timeout, Retry - 1);
         {error, Reason} ->
             {error, Reason};
         {ok, StatusCode, _Headers} ->
