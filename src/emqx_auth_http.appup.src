@@ -9,6 +9,5 @@
     {<<".*">>, [
       {restart_application, emqx_auth_http}
     ]}
-
   ]
 }.
