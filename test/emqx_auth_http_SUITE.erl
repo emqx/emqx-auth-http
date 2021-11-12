@@ -166,3 +166,4 @@ t_comment_config(_) ->
     ?assertEqual(AuthCount - 1, length(emqx_hooks:lookup('client.authenticate'))),
     ?assertEqual(AclCount - 1, length(emqx_hooks:lookup('client.check_acl'))).
 
+
