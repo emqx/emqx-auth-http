@@ -51,13 +51,20 @@ do_check_acl(#{username := <<$$, _/binary>>}, _PubSub, _Topic, _AclResult, _Conf
 do_check_acl(ClientInfo, PubSub, Topic, _AclResult, #{acl_req := AclReq,
                                                       pool_name := PoolName}) ->
     ClientInfo1 = ClientInfo#{access => access(PubSub), topic => Topic},
+    ClientId = maps:get(clientid, ClientInfo1, undefined),
+    Username = maps:get(username, ClientInfo1, undefined),
     case check_acl_request(PoolName, AclReq, ClientInfo1) of
         {ok, 200, <<"ignore">>} -> ok;
         {ok, 200, _Body}    -> {stop, allow};
-        {ok, _Code, _Body}  -> {stop, deny};
+        {ok, Code, _Body}  ->
+            ?LOG(error, "Deny ~s ~s to topic ~s, username: ~p, http response code: ~p",
+                 [ClientId, PubSub, Topic, Username, Code]),
+            {stop, deny};
         {error, Error}      ->
-            ?LOG(error, "Request ACL path ~s, error: ~p",
-                 [AclReq#http_request.path, Error]),
+            ?LOG(error, "Deny ~s ~s to topic ~s, username: ~p, due to request "
+                        "http server failure, path: ~p, error: ~0p",
+                        [ClientId, PubSub, Topic, Username,
+                         AclReq#http_request.path, Error]),
             ok
     end.
 

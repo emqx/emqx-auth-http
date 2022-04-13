@@ -42,6 +42,8 @@ register_metrics() ->
 check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
                                 super_req  := SuperReq,
                                 pool_name  := PoolName}) ->
+    ClientId = maps:get(clientid, ClientInfo, undefined),
+    Username = maps:get(username, ClientInfo, undefined),
     case authenticate(PoolName, AuthReq, ClientInfo) of
         {ok, 200, <<"ignore">>} ->
             emqx_metrics:inc(?AUTH_METRICS(ignore)), ok;
@@ -53,16 +55,18 @@ check(ClientInfo, AuthResult, #{auth_req   := AuthReq,
                                 anonymous   => false,
                                 mountpoint  => mountpoint(Body, ClientInfo)}};
         {ok, Code, _Body} ->
-            ?LOG(error, "Deny connection from path: ~s, response http code: ~p",
-                 [AuthReq#http_request.path, Code]),
+            ?LOG(error, "Deny connection(~s) from path: ~s, username: ~s, http "
+                        "response code: ~p",
+                        [ClientId, AuthReq#http_request.path, Username, Code]),
             emqx_metrics:inc(?AUTH_METRICS(failure)),
             {stop, AuthResult#{auth_result => http_to_connack_error(Code),
                                anonymous   => false}};
         {error, Error} ->
-            ?LOG(error, "Request auth path: ~s, error: ~p",
-                 [AuthReq#http_request.path, Error]),
+            ?LOG(error, "Deny connection(~s) from path: ~s, username: ~s, due to "
+                        "request http-server failed: ~0p",
+                 [ClientId, AuthReq#http_request.path, Username, Error]),
             emqx_metrics:inc(?AUTH_METRICS(failure)),
-            %%FIXME later: server_unavailable is not right.
+            %% FIXME later: server_unavailable is not right.
             {stop, AuthResult#{auth_result => server_unavailable,
                                anonymous   => false}}
     end.
